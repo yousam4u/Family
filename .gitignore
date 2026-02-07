@@ -1,0 +1,51 @@
+# Environment variables
+.env
+.env.local
+
+# OS generated files
+desktop.ini
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Old/backup files
+*.bak
+*.old
+
+# Node modules (if used later)
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Reference images (keep in docs/)
+*.jpg
+*.jpeg
+*.png
+!prototype/icons/*.png
+!prototype/imo/*.png
+
+# Unnecessary folders
+Family/
+family_hub/
+prototye/
+phoenixai-landing-shop/
+nul
+
+# Flutter related (deprecated)
+FLUTTER-*.md
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/

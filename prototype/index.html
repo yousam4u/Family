@@ -1,0 +1,4903 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#6C63FF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Family Hub">
+  <meta name="description" content="가족 공동관리 앱 - 일정, 집안일, 벌금, 투표 관리">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+  <title>Family Hub - 가족 공동관리</title>
+  <script>
+    // 전역 에러 핸들러
+    window.onerror = function (msg, src, line, col, err) {
+      var d = document.getElementById('_dbg');
+      if (!d) {
+        d = document.createElement('div');
+        d.id = '_dbg';
+        d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:30vh;overflow:auto;background:#1a0000;color:#ff6b6b;font:11px monospace;padding:8px;z-index:9999;';
+        document.body.appendChild(d);
+      }
+      d.innerHTML += '<div>[Line ' + line + '] ' + msg + '</div>';
+      return false;
+    };
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Primary Colors - 스카이 블루 테마 */
+      --primary: #4DB6E5;
+      --primary-light: #7DCBEF;
+      --primary-dark: #3AA3D6;
+      --primary-darker: #2B8BC0;
+
+      /* Accent Colors */
+      --accent-purple: #8B8EE8;
+      --accent-mint: #2DD4BF;
+      --accent-orange: #F59E0B;
+      --accent-light-blue: #E0F4FC;
+      --accent-sky: #4DB6E5;
+
+      /* Gradients */
+      --gradient-1: linear-gradient(135deg, #7DCBEF 0%, #4DB6E5 100%);
+      --gradient-2: linear-gradient(135deg, #4DB6E5 0%, #3AA3D6 100%);
+      --gradient-3: linear-gradient(180deg, #4DB6E5 0%, #3AA3D6 100%);
+      --gradient-4: linear-gradient(135deg, #3AA3D6 0%, #2B8BC0 100%);
+      --gradient-header: linear-gradient(135deg, #4DB6E5 0%, #3AA3D6 100%);
+      --gradient-purple: linear-gradient(135deg, #8B8EE8 0%, #7678D9 100%);
+      --gradient-mint: linear-gradient(135deg, #2DD4BF 0%, #20B5A2 100%);
+      --gradient-orange: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+
+      /* Background & Surface */
+      --bg: #F2F3F5;
+      --bg-alt: #E9ECEF;
+      --bg-soft: #E9ECEF;
+      --card: #FFFFFF;
+
+      /* Text */
+      --text: #2F2F2F;
+      --text-sub: #6B7280;
+      --text-muted: #9CA3AF;
+
+      /* Status */
+      --danger: #EF4444;
+      --success: #2DD4BF;
+      --warning: #F59E0B;
+
+      /* Border */
+      --border: #E5E7EB;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative;
+    }
+
+    #mainApp {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative;
+    }
+
+    /* === Header === */
+    .header {
+      background: var(--gradient-header);
+      color: white;
+      padding: 16px 20px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(77, 182, 229, 0.3);
+      border-radius: 0 0 24px 24px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .header .subtitle {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .header-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* === Pages Container === */
+    .pages-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 80px;
+    }
+
+    /* === Tab Pages === */
+    .page {
+      display: none;
+      padding: 16px;
+      padding-bottom: 20px;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* === Bottom Nav === */
+    .bottom-nav {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 406px;
+      background: #FFFFFF;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 8px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 1000;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 9px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item .icon {
+      font-size: 18px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background: var(--accent-light-blue);
+      border-radius: 12px;
+    }
+
+    .nav-item.active .icon {
+      transform: scale(1.1);
+    }
+
+    /* === Cards === */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* === Buttons === */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: var(--gradient-2);
+      color: white;
+      box-shadow: 0 4px 12px rgba(77, 182, 229, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(77, 182, 229, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #FF4D6A 0%, #FF6B8A 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(255, 77, 106, 0.3);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #2DD4BF 0%, #20B5A2 100%);
+      color: #3E4958;
+      box-shadow: 0 4px 15px rgba(26, 241, 185, 0.3);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-outline:hover {
+      background: var(--accent-light-blue);
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* === Form === */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--primary);
+    }
+
+    /* === Badge === */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-pending {
+      background: #FFF3E0;
+      color: #F5A623;
+      border: 1px solid #F5A62333;
+    }
+
+    .badge-done {
+      background: #E8F5E9;
+      color: #27AE60;
+      border: 1px solid #27AE6033;
+    }
+
+    .badge-overdue {
+      background: #FFEBEE;
+      color: #E74C3C;
+      border: 1px solid #E74C3C33;
+    }
+
+    /* === Modal === */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 3, 61, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 24px;
+      padding: 24px;
+      width: 90%;
+      max-width: 380px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(77, 182, 229, 0.3);
+      border: 1px solid var(--border);
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      text-align: center;
+      background: var(--gradient-3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* === Roulette === */
+    .roulette-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .roulette-wheel {
+      width: 280px;
+      height: 280px;
+      position: relative;
+    }
+
+    .roulette-wheel canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .roulette-pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    /* === Calendar === */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      text-align: center;
+    }
+
+    .calendar-grid .day-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
+      padding: 8px 0;
+    }
+
+    .calendar-grid .day {
+      padding: 8px 4px;
+      font-size: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .calendar-grid .day:hover {
+      background: var(--bg);
+    }
+
+    .calendar-grid .day.today {
+      background: var(--gradient-3);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(77, 182, 229, 0.4);
+    }
+
+    .calendar-grid .day.other-month {
+      color: #B0C4D8;
+    }
+
+    .calendar-grid .day .dot {
+      width: 5px;
+      height: 5px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      margin: 2px auto 0;
+      box-shadow: 0 0 6px var(--accent-blue);
+    }
+
+    /* === Members List === */
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .member-item:last-child {
+      border: none;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      overflow: hidden;
+    }
+
+    .member-info {
+      flex: 1;
+    }
+
+    .member-info .name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .member-info .role {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* === Horizontal Family Members === */
+    .family-members-grid {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    .family-member-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      max-width: 72px;
+      padding: 10px 4px;
+      background: var(--bg);
+      border-radius: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .family-member-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(77, 182, 229, 0.15);
+    }
+
+    .family-member-card .avatar-large {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .family-member-card .avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .family-member-card .member-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .family-member-card .member-role {
+      font-size: 9px;
+      color: var(--text-sub);
+      padding: 2px 6px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    /* === Chore item === */
+    .chore-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+
+    .chore-item .chore-icon {
+      font-size: 28px;
+    }
+
+    .chore-item .chore-info {
+      flex: 1;
+    }
+
+    .chore-item .chore-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .chore-item .chore-meta {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .chore-item.checked .chore-title {
+      text-decoration: line-through;
+      color: var(--text-sub);
+    }
+
+    /* === Custom Checkbox === */
+    .task-checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      background: white;
+    }
+
+    .task-checkbox:hover {
+      border-color: var(--primary);
+    }
+
+    .task-checkbox.checked {
+      background: var(--accent-mint);
+      border-color: var(--accent-mint);
+    }
+
+    .task-checkbox.checked::after {
+      content: '✓';
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* === Fine stat === */
+    .fine-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .fine-stat {
+      text-align: center;
+      padding: 14px 8px;
+      background: linear-gradient(135deg, rgba(224, 244, 252, 0.5), rgba(77, 182, 229, 0.1));
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .fine-stat .amount {
+      font-size: 22px;
+      font-weight: 800;
+      background: var(--gradient-3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .fine-stat .label {
+      font-size: 10px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    /* === Supabase Test Panel === */
+    .test-panel {
+      background: var(--gradient-4);
+      color: #eee;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 32px rgba(77, 182, 229, 0.4);
+    }
+
+    .test-panel h4 {
+      color: #2DD4BF;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .test-output {
+      background: rgba(47, 47, 47, 0.95);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #E0F4FC;
+      line-height: 1.5;
+      border: 1px solid rgba(77, 182, 229, 0.3);
+    }
+
+    .test-output .error {
+      color: #EF4444;
+    }
+
+    .test-output .info {
+      color: #2DD4BF;
+    }
+
+    .test-output .success {
+      color: #4ade80;
+    }
+
+    .test-output table {
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    /* === Auth Screen === */
+    .auth-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+      text-align: center;
+      background: var(--gradient-1);
+    }
+
+    .auth-screen .logo {
+      font-size: 72px;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 8px 16px rgba(77, 182, 229, 0.3));
+    }
+
+    .auth-screen h2 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      background: var(--gradient-4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 800;
+    }
+
+    .auth-screen p {
+      color: var(--primary-darker);
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 14px;
+      padding: 4px;
+      box-shadow: 0 4px 20px rgba(77, 182, 229, 0.15);
+    }
+
+    .auth-tab {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .auth-tab.active {
+      background: var(--gradient-3);
+      color: white;
+      box-shadow: 0 4px 15px rgba(77, 182, 229, 0.4);
+    }
+
+    /* === Section Title === */
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* === Emoticon Grid === */
+    .emoticon-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 8px;
+    }
+
+    .emoticon-item {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 4px;
+    }
+
+    .emoticon-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .emoticon-item:hover {
+      transform: scale(1.1);
+    }
+
+    .emoticon-item.selected {
+      transform: scale(1.15);
+      filter: drop-shadow(0 4px 8px rgba(77, 182, 229, 0.5));
+    }
+
+    /* === Toast === */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--gradient-4);
+      color: white;
+      padding: 14px 28px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 300;
+      transition: transform 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0, 3, 61, 0.6);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* === Connection Status === */
+    .conn-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .conn-ok .conn-dot {
+      background: #00D9A5;
+      box-shadow: 0 0 8px #00D9A5;
+    }
+
+    .conn-ok {
+      background: linear-gradient(135deg, rgba(135, 245, 245, 0.3), rgba(0, 217, 165, 0.2));
+      color: #00A080;
+      border: 1px solid #87F5F5;
+    }
+
+    .conn-fail .conn-dot {
+      background: #FF4D6A;
+      box-shadow: 0 0 8px #FF4D6A;
+    }
+
+    .conn-fail {
+      background: linear-gradient(135deg, rgba(255, 230, 235, 0.6), rgba(255, 77, 106, 0.2));
+      color: #FF4D6A;
+      border: 1px solid #FF4D6A44;
+    }
+
+    .conn-loading .conn-dot {
+      background: #4DB6E5;
+      animation: pulse 1s infinite;
+      box-shadow: 0 0 8px #4DB6E5;
+    }
+
+    .conn-loading {
+      background: linear-gradient(135deg, rgba(224, 244, 252, 0.6), rgba(77, 182, 229, 0.2));
+      color: #3AA3D6;
+      border: 1px solid rgba(77, 182, 229, 0.3);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    /* === Bar Chart === */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 120px;
+      padding: 0 4px;
+    }
+
+    .bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bar {
+      width: 100%;
+      max-width: 36px;
+      background: var(--gradient-3);
+      border-radius: 8px 8px 0 0;
+      transition: height 0.5s ease;
+      min-height: 4px;
+      box-shadow: 0 4px 12px rgba(77, 182, 229, 0.3);
+    }
+
+    .bar-label {
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+
+    .bar-value {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* === Vote Option === */
+    .vote-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .vote-option:hover {
+      border-color: var(--primary-light);
+    }
+
+    .vote-option.voted {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(242, 230, 238, 0.6), rgba(151, 125, 255, 0.15));
+    }
+
+    .vote-option .vote-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: rgba(151, 125, 255, 0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .vote-option .vote-bar-fill {
+      height: 100%;
+      background: var(--gradient-3);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .vote-option .vote-pct {
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* === Meeting Card === */
+    .meeting-card {
+      border-left: 4px solid;
+      border-image: var(--gradient-3) 1;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(242, 230, 238, 0.4), rgba(151, 125, 255, 0.08));
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 10px;
+    }
+
+    .meeting-card .meeting-title {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .meeting-card .meeting-meta {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    .meeting-card .meeting-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    /* === Comment === */
+    .comment-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comment-item:last-child {
+      border: none;
+    }
+
+    .comment-item .comment-avatar {
+      font-size: 24px;
+    }
+
+    .comment-item .comment-body {
+      flex: 1;
+    }
+
+    .comment-item .comment-author {
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .comment-item .comment-text {
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .comment-item .comment-time {
+      font-size: 10px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    /* === Action Items === */
+    .action-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .action-item input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+
+    .action-item.done {
+      text-decoration: line-through;
+      color: var(--text-sub);
+    }
+
+    /* === Stat Cards (Phase 2) === */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 16px 8px;
+      background: linear-gradient(135deg, rgba(242, 230, 238, 0.6), rgba(151, 125, 255, 0.15));
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .stat-card .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      background: var(--gradient-3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card .stat-label {
+      font-size: 10px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    /* === Weight Slider === */
+    .weight-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .weight-row .member-name {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 50px;
+    }
+
+    .weight-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+    }
+
+    .weight-row .weight-val {
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 30px;
+      text-align: right;
+      color: var(--primary);
+    }
+
+    /* === Tabs (sub-page) === */
+    .sub-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 14px;
+    }
+
+    .sub-tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .sub-tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- PWA Install Banner -->
+  <div id="installBanner" style="
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #6C63FF 0%, #4DB6E5 100%);
+    color: white;
+    padding: 16px 20px;
+    z-index: 9999;
+    box-shadow: 0 -4px 20px rgba(108, 99, 255, 0.3);
+    animation: slideUp 0.3s ease-out;
+  ">
+    <style>
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+
+        to {
+          transform: translateY(0);
+        }
+      }
+    </style>
+    <div style="display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 28px;">🏠</span>
+        <div>
+          <div style="font-weight: 700; font-size: 15px;">Family Hub 설치</div>
+          <div style="font-size: 12px; opacity: 0.9;">홈 화면에 추가하여 앱처럼 사용하세요!</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="installPWA()" style="
+          background: white;
+          color: #6C63FF;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 25px;
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        ">설치하기</button>
+        <button onclick="dismissInstall()" style="
+          background: rgba(255,255,255,0.2);
+          color: white;
+          border: none;
+          padding: 10px 12px;
+          border-radius: 25px;
+          font-size: 14px;
+          cursor: pointer;
+        ">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== AUTH SCREEN ========== -->
+  <div id="authScreen" class="auth-screen">
+    <div class="logo">🏠</div>
+    <h2>Family Hub</h2>
+    <p>가족 공동관리 앱 프로토타입</p>
+
+    <!-- Always visible install button -->
+    <button id="installBtn" onclick="installPWA()" style="
+      background: linear-gradient(135deg, #6C63FF, #4DB6E5);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+    ">
+      📲 앱으로 설치하기
+    </button>
+
+    <div style="width:100%; max-width:320px;">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="showAuthTab('login')">로그인</button>
+        <button class="auth-tab" onclick="showAuthTab('create')">가족 생성</button>
+        <button class="auth-tab" onclick="showAuthTab('join')">가족 참여</button>
+      </div>
+
+      <div id="authLogin">
+        <div class="form-group">
+          <label>아이디</label>
+          <input type="text" id="loginIdInput" placeholder="아이디 입력" value="">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="loginPwInput" placeholder="비밀번호 입력" value="">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="loginUser()">로그인</button>
+      </div>
+
+      <div id="authCreate" style="display:none;">
+        <div class="form-group">
+          <label>가족 이름</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="familyNameInput" placeholder="예: 우리 가족" value="" style="flex:1;"
+              oninput="resetFamilyNameCheck()">
+            <button class="btn btn-sm" style="background:var(--accent-purple);color:white;white-space:nowrap;"
+              onclick="checkFamilyName()">중복확인</button>
+          </div>
+          <div id="familyNameCheckResult" style="margin-top:6px;font-size:12px;display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label>아이디</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="createUserIdInput" placeholder="영문, 숫자 4자 이상" style="flex:1;"
+              oninput="resetUserIdCheck()">
+            <button class="btn btn-sm" style="background:var(--accent-purple);color:white;white-space:nowrap;"
+              onclick="checkUserId('create')">중복확인</button>
+          </div>
+          <div id="createUserIdCheckResult" style="margin-top:6px;font-size:12px;display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label>닉네임</label>
+          <input type="text" id="nicknameInput" placeholder="예: 아빠">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="createPasswordInput" placeholder="비밀번호 4자 이상">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="createFamily()">가족 생성하기</button>
+      </div>
+
+      <div id="authJoin" style="display:none;">
+        <div class="form-group">
+          <label>가족 코드</label>
+          <input type="text" id="familyCodeInput" placeholder="8자리 코드 입력" maxlength="8"
+            style="text-transform:uppercase; text-align:center; font-size:20px; letter-spacing:4px;">
+        </div>
+        <div class="form-group">
+          <label>아이디</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="joinUserIdInput" placeholder="영문, 숫자 4자 이상" style="flex:1;"
+              oninput="resetUserIdCheck()">
+            <button class="btn btn-sm" style="background:var(--accent-purple);color:white;white-space:nowrap;"
+              onclick="checkUserId('join')">중복확인</button>
+          </div>
+          <div id="joinUserIdCheckResult" style="margin-top:6px;font-size:12px;display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label>닉네임</label>
+          <input type="text" id="joinNicknameInput" placeholder="닉네임 입력">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="joinPasswordInput" placeholder="비밀번호 4자 이상">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="joinFamily()">가족 참여하기</button>
+      </div>
+
+    </div>
+  </div>
+  </div>
+
+  <!-- ========== MAIN APP ========== -->
+  <div id="mainApp" style="display:none;">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1 id="headerFamilyName">테스트 가족</h1>
+        <div class="subtitle" id="headerCode">코드: ABCD1234</div>
+      </div>
+      <div class="header-right">
+        <div class="conn-status conn-loading" id="connStatus">
+          <div class="conn-dot"></div>
+          <span id="connText">연결 중</span>
+        </div>
+        <button class="header-btn" onclick="showPage('settings')" title="설정">⚙</button>
+      </div>
+    </div>
+
+    <!-- Pages Container -->
+    <div class="pages-container">
+
+      <!-- ===== HOME PAGE ===== -->
+      <div class="page active" id="page-home">
+        <div class="section-title">
+          <span>🏠 홈 대시보드</span>
+          <span style="font-size:12px;color:var(--text-sub)" id="todayDate"></span>
+        </div>
+
+        <!-- Today Schedule -->
+        <div class="card" style="border-radius: 20px;">
+          <div class="card-title">📅 오늘 일정</div>
+          <div id="todayEvents">
+            <!-- 동적으로 렌더링됨 -->
+          </div>
+        </div>
+
+        <!-- Today Chores -->
+        <div class="card" style="border-radius: 20px;">
+          <div class="card-title">🧹 오늘 집안일</div>
+          <div id="todayChores">
+            <!-- 동적으로 렌더링됨 -->
+          </div>
+        </div>
+
+        <!-- Family Members -->
+        <div class="card" style="border-radius: 20px;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>👨‍👩‍👧‍👦 가족 구성원</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-sm" id="inviteLinkBtn" style="background:var(--accent-green);color:white;font-size:11px;padding:4px 10px;" onclick="showInviteLink()">🔗 초대</button>
+              <button class="btn btn-sm" id="addMemberBtn" style="background:var(--accent-purple);color:white;font-size:11px;padding:4px 10px;display:none;" onclick="showModal('addMemberModal')">+ 추가</button>
+            </div>
+          </div>
+          <div id="familyMembers">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+
+        <!-- Upcoming Meeting (동적 렌더링) -->
+        <div id="homeMeetingCard"></div>
+
+        <!-- Active Vote (동적 렌더링) -->
+        <div id="homeVoteCard"></div>
+
+        <!-- Fine Alert (동적 렌더링) -->
+        <div id="homeFineCard"></div>
+      </div>
+
+      <!-- ===== CALENDAR PAGE ===== -->
+      <div class="page" id="page-calendar">
+        <div class="section-title">
+          <span>📅 일정 관리</span>
+          <button class="btn btn-primary btn-sm" onclick="showModal('eventModal')">+ 일정 추가</button>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)">◀</button>
+            <strong id="calendarMonth" style="font-size:16px;"></strong>
+            <button class="btn btn-outline btn-sm" onclick="changeMonth(1)">▶</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 선택한 날의 일정</div>
+          <div id="selectedDateEvents">
+            <p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">날짜를 선택하세요</p>
+          </div>
+        </div>
+
+        <!-- Google Calendar -->
+        <div class="card">
+          <div class="card-title">📆 Google Calendar 연동</div>
+
+          <!-- Export: 일정을 Google Calendar에 추가 -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📤 일정 내보내기</div>
+            <p style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">선택한 일정을 Google Calendar에 추가합니다 (새 탭에서 열림)
+            </p>
+            <select id="gcalExportSelect"
+              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;"></select>
+            <button class="btn btn-primary btn-sm btn-block" onclick="exportToGoogleCalendar()">Google Calendar에
+              추가</button>
+            <button class="btn btn-outline btn-sm btn-block" style="margin-top:6px;"
+              onclick="exportAllToGoogleCalendar()">전체 일정 한번에 내보내기 (.ics 다운로드)</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+
+          <!-- Import: Google Calendar에서 가져오기 -->
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📥 일정 가져오기</div>
+            <p style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">Google Calendar의 공개 캘린더 ID를 입력하거나 데모로
+              테스트하세요</p>
+            <div class="form-group">
+              <input type="text" id="gcalCalendarId" placeholder="캘린더 ID (예: abc123@group.calendar.google.com)">
+            </div>
+            <div class="form-group">
+              <input type="text" id="gcalApiKey" placeholder="Google API Key (선택)">
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-outline btn-sm" style="flex:1;" onclick="importFromGoogle()">가져오기</button>
+              <button class="btn btn-sm" style="flex:1;background:var(--bg);color:var(--text);"
+                onclick="importGoogleDemo()">데모 가져오기</button>
+            </div>
+            <div id="gcalImportResult" style="font-size:12px;color:var(--text-sub);margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CHORES PAGE ===== -->
+      <div class="page" id="page-chores">
+        <div class="section-title">
+          <span>🧹 집안일</span>
+          <button class="btn btn-primary btn-sm" onclick="showModal('choreModal')">+ 집안일 추가</button>
+        </div>
+
+        <!-- Roulette Button -->
+        <div class="card"
+          style="text-align:center;background:linear-gradient(135deg,#3AA3D6 0%,#4DB6E5 50%,#2DD4BF 100%);color:white;box-shadow:0 8px 32px rgba(77,182,229,0.4);border-radius:20px;">
+          <div style="font-size:40px;margin-bottom:8px;">🎰</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px;">룰렛 돌리기</div>
+          <div style="font-size:12px;opacity:0.8;margin-bottom:12px;">공정한 집안일 분배!</div>
+          <button class="btn" style="background:white;color:var(--primary);font-weight:700;"
+            onclick="showModal('rouletteModal')">
+            룰렛 시작하기 🎯
+          </button>
+        </div>
+
+        <!-- Chore List -->
+        <div class="card">
+          <div class="card-title">📋 집안일 목록</div>
+          <div id="choreList"></div>
+        </div>
+
+        <!-- Roulette History -->
+        <div class="card">
+          <div class="card-title">🎲 룰렛 기록</div>
+          <div id="rouletteHistory"></div>
+        </div>
+      </div>
+
+      <!-- ===== FINE PAGE ===== -->
+      <div class="page" id="page-fines">
+        <div class="section-title">
+          <span>💰 벌금 관리</span>
+          <button class="btn btn-primary btn-sm" onclick="showModal('fineRuleModal')">+ 규칙 추가</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 이번 달 현황</div>
+          <div class="fine-stats">
+            <div class="fine-stat">
+              <div class="amount" id="totalFines">5,000</div>
+              <div class="label">총 벌금 (원)</div>
+            </div>
+            <div class="fine-stat">
+              <div class="amount" style="color:var(--danger)" id="unpaidFines">3,000</div>
+              <div class="label">미납</div>
+            </div>
+            <div class="fine-stat">
+              <div class="amount" style="color:var(--success)" id="paidFines">2,000</div>
+              <div class="label">납부 완료</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div class="card">
+          <div class="card-title">📊 구성원별 벌금</div>
+          <div class="bar-chart" id="fineChart"></div>
+        </div>
+
+        <!-- Fine Rules -->
+        <div class="card">
+          <div class="card-title">📏 벌금 규칙</div>
+          <div id="fineRulesList"></div>
+        </div>
+
+        <!-- Fine History -->
+        <div class="card">
+          <div class="card-title">📝 벌금 기록</div>
+          <div id="fineHistoryList"></div>
+        </div>
+      </div>
+
+      <!-- ===== MEETING PAGE ===== -->
+      <div class="page" id="page-meetings">
+        <div class="section-title">
+          <span>📋 회의</span>
+          <button class="btn btn-primary btn-sm" onclick="showModal('meetingModal')">+ 회의 생성</button>
+        </div>
+
+        <!-- Upcoming Meetings -->
+        <div class="card">
+          <div class="card-title">📅 예정된 회의</div>
+          <div id="meetingList"></div>
+        </div>
+
+        <!-- Meeting Detail (shown when a meeting is selected) -->
+        <div class="card" id="meetingDetailCard" style="display:none;">
+          <div class="card-title" id="meetingDetailTitle">📋 회의 상세</div>
+
+          <!-- Agenda & Comments -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">💬 안건 댓글</div>
+            <div id="meetingComments"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <input type="text" id="commentInput" placeholder="댓글 입력..."
+                style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+              <button class="btn btn-primary btn-sm" onclick="addComment()">전송</button>
+            </div>
+          </div>
+
+          <!-- Meeting Minutes -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📝 회의록</div>
+            <textarea id="meetingMinutes" placeholder="회의록을 작성하세요..." rows="4"
+              style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;"></textarea>
+            <button class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="saveMeetingMinutes()">회의록
+              저장</button>
+          </div>
+
+          <!-- Action Items -->
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">✅ 액션 아이템</div>
+            <div id="actionItemsList"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <input type="text" id="actionItemInput" placeholder="할 일 입력..."
+                style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+              <select id="actionItemAssignee"
+                style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;"></select>
+              <button class="btn btn-primary btn-sm" onclick="addActionItem()">추가</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== VOTE PAGE ===== -->
+      <div class="page" id="page-votes">
+        <div class="section-title">
+          <span>🗳️ 투표</span>
+          <button class="btn btn-primary btn-sm" onclick="showModal('voteModal')">+ 투표 생성</button>
+        </div>
+
+        <!-- Active Votes -->
+        <div class="card">
+          <div class="card-title">🔥 진행 중인 투표</div>
+          <div id="activeVotesList"></div>
+        </div>
+
+        <!-- Closed Votes -->
+        <div class="card">
+          <div class="card-title">📊 완료된 투표</div>
+          <div id="closedVotesList"></div>
+        </div>
+      </div>
+
+      <!-- ===== STATS PAGE ===== -->
+      <div class="page" id="page-stats">
+        <div class="section-title"><span>📊 통계 & 리포트</span></div>
+
+        <!-- Completion Stats -->
+        <div class="card">
+          <div class="card-title">🏆 집안일 완료율</div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-value" id="statCompletionRate">78%</div>
+              <div class="stat-label">이번 주 완료율</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statTotalAssigned">23</div>
+              <div class="stat-label">총 배정 건수</div>
+            </div>
+          </div>
+          <div class="bar-chart" id="completionChart" style="height:100px;"></div>
+        </div>
+
+        <!-- Weekly Assignment Table -->
+        <div class="card">
+          <div class="card-title">📅 주간 배정표</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;font-size:11px;border-collapse:collapse;" id="weeklyTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Fine Trend -->
+        <div class="card">
+          <div class="card-title">💰 벌금 추이 (최근 4주)</div>
+          <div class="bar-chart" id="fineTrendChart" style="height:100px;"></div>
+        </div>
+
+        <!-- Weighted Roulette -->
+        <div class="card">
+          <div class="card-title">⚖️ 가중치 룰렛 설정</div>
+          <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">값이 높을수록 당첨 확률이 높아집니다</p>
+          <div id="weightSettings"></div>
+          <button class="btn btn-primary btn-sm btn-block" style="margin-top:12px;" onclick="spinWeightedRoulette()">가중치
+            룰렛 돌리기</button>
+          <div id="weightedRouletteResult"
+            style="text-align:center;font-size:16px;font-weight:700;margin-top:12px;min-height:24px;"></div>
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS / API TEST PAGE ===== -->
+      <div class="page" id="page-settings">
+        <div class="section-title">
+          <span>⚙ 설정</span>
+          <button class="btn btn-primary btn-sm" id="adminLoginBtn" onclick="toggleAdminLogin()">🔐 관리자 로그인</button>
+        </div>
+
+        <!-- Admin Only Test Panels -->
+        <div id="adminTestPanels" style="display:none !important;">
+          <div class="section-title" style="margin-top:8px;"><span>🔧 관리자 도구</span></div>
+
+          <!-- Supabase Connection -->
+          <div class="card">
+            <div class="card-title">🔌 Supabase 연결</div>
+            <div class="form-group">
+              <label>Supabase URL</label>
+              <input type="text" id="supabaseUrl" value="https://qvforisbxbapojpafbma.supabase.co">
+            </div>
+            <div class="form-group">
+              <label>Anon Key</label>
+              <input type="text" id="supabaseKey"
+                value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2Zm9yaXNieGJhcG9qcGFmYm1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMDM0NjgsImV4cCI6MjA4NTg3OTQ2OH0.LSfAT1NqD2Y5p1Wp_vG6I_KZ9mY2jrTCjrfyajvpIrk">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="connectSupabase()">연결 테스트</button>
+          </div>
+
+          <!-- API Test Buttons -->
+          <div class="test-panel">
+            <h4>🧪 API 테스트</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;" onclick="testAPI('families')">가족
+                조회</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;" onclick="testAPI('users')">사용자
+                조회</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;"
+                onclick="testAPI('emoticons')">이모티콘</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;" onclick="testAPI('events')">일정</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;"
+                onclick="testAPI('chores')">집안일</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;"
+                onclick="testAPI('assignments')">배정</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;" onclick="testAPI('fines')">벌금</button>
+              <button class="btn btn-sm" style="background:#4DB6E5;color:white;"
+                onclick="testAPI('roulette_spins')">룰렛기록</button>
+            </div>
+            <div class="test-output" id="apiOutput">Supabase 연결 후 테스트 버튼을 눌러주세요...</div>
+          </div>
+
+          <!-- Custom Query -->
+          <div class="test-panel">
+            <h4>🔍 커스텀 쿼리</h4>
+            <div class="form-group">
+              <input type="text" id="customTable" placeholder="테이블명" value="families"
+                style="background:#0d0d1a;color:white;border-color:#333;">
+            </div>
+            <div class="form-group">
+              <input type="text" id="customSelect" placeholder="select 컬럼 (비우면 *)"
+                style="background:#0d0d1a;color:white;border-color:#333;">
+            </div>
+            <div class="form-group">
+              <input type="number" id="customLimit" placeholder="limit" value="10"
+                style="background:#0d0d1a;color:white;border-color:#333;">
+            </div>
+            <button class="btn btn-sm btn-success" onclick="runCustomQuery()">실행</button>
+          </div>
+        </div><!-- End adminTestPanels -->
+
+        <!-- App Settings (visible to all) -->
+        <div class="card">
+          <div class="card-title">👤 프로필 설정</div>
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="width:64px;height:64px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;" id="profileEmoticon">
+              <img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="showModal('emoticonModal')">이모티콘 변경</button>
+          </div>
+          <div class="form-group">
+            <label>닉네임</label>
+            <input type="text" id="settingsNickname" value="아빠">
+          </div>
+          <div class="form-group">
+            <label>알림 설정</label>
+            <select>
+              <option>모든 알림</option>
+              <option>중요 알림만</option>
+              <option>알림 끄기</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <button class="btn btn-danger btn-block" onclick="logout()">로그아웃</button>
+        </div>
+      </div>
+
+    </div><!-- End Pages Container -->
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+      <button class="nav-item active" onclick="showPage('home')" data-page="home">
+        <span class="icon">🏠</span>
+        <span>홈</span>
+      </button>
+      <button class="nav-item" onclick="showPage('calendar')" data-page="calendar">
+        <span class="icon">📅</span>
+        <span>일정</span>
+      </button>
+      <button class="nav-item" onclick="showPage('chores')" data-page="chores">
+        <span class="icon">🧹</span>
+        <span>집안일</span>
+      </button>
+      <button class="nav-item" onclick="showPage('meetings')" data-page="meetings">
+        <span class="icon">📋</span>
+        <span>회의</span>
+      </button>
+      <button class="nav-item" onclick="showPage('votes')" data-page="votes">
+        <span class="icon">🗳️</span>
+        <span>투표</span>
+      </button>
+      <button class="nav-item" onclick="showPage('fines')" data-page="fines">
+        <span class="icon">💰</span>
+        <span>벌금</span>
+      </button>
+      <button class="nav-item" onclick="showPage('stats')" data-page="stats">
+        <span class="icon">📊</span>
+        <span>통계</span>
+      </button>
+      <button class="nav-item" onclick="showPage('settings')" data-page="settings">
+        <span class="icon">⚙</span>
+        <span>설정</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== MODALS ========== -->
+
+  <!-- Roulette Modal -->
+  <div class="modal-overlay" id="rouletteModal">
+    <div class="modal">
+      <h3>🎰 룰렛 돌리기</h3>
+      <div class="form-group">
+        <label>집안일 선택</label>
+        <select id="rouletteChore"></select>
+      </div>
+      <div class="form-group">
+        <label>참여자 선택</label>
+        <div id="rouletteParticipants" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="preventConsecutive" checked>
+          연속 당첨 방지
+        </label>
+      </div>
+
+      <div class="roulette-container" id="rouletteArea" style="display:none;">
+        <div class="roulette-wheel">
+          <div class="roulette-pointer">▼</div>
+          <canvas id="rouletteCanvas" width="280" height="280"></canvas>
+        </div>
+        <div id="rouletteResult" style="font-size:18px;font-weight:700;text-align:center;min-height:30px;"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('rouletteModal')">닫기</button>
+        <button class="btn btn-primary" style="flex:1;" id="spinBtn" onclick="spinRoulette()">돌리기!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Modal -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="modal">
+      <h3>📅 일정 추가</h3>
+      <div class="form-group">
+        <label>제목</label>
+        <input type="text" id="eventTitle" placeholder="일정 제목">
+      </div>
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="eventDate">
+      </div>
+      <div class="form-group">
+        <label>시간</label>
+        <input type="time" id="eventTime">
+      </div>
+      <div class="form-group">
+        <label>공개 범위</label>
+        <select id="eventScope">
+          <option value="family">가족 전체</option>
+          <option value="personal">개인</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>반복</label>
+        <select id="eventRecurrence">
+          <option value="none">반복 안함</option>
+          <option value="daily">매일</option>
+          <option value="weekly">매주</option>
+          <option value="biweekly">격주</option>
+          <option value="monthly">매월</option>
+          <option value="yearly">매년</option>
+        </select>
+      </div>
+      <div id="recurrenceEndGroup" class="form-group" style="display:none;">
+        <label>반복 종료일</label>
+        <input type="date" id="eventRecurrenceEnd">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('eventModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="addEvent()">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chore Modal -->
+  <div class="modal-overlay" id="choreModal">
+    <div class="modal">
+      <h3>🧹 집안일 추가</h3>
+      <div class="form-group">
+        <label>집안일 이름</label>
+        <input type="text" id="choreTitle" placeholder="예: 설거지">
+      </div>
+      <div class="form-group">
+        <label>설명</label>
+        <textarea id="choreDesc" placeholder="설명 (선택)" rows="2"
+          style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('choreModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="addChore()">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fine Rule Modal -->
+  <div class="modal-overlay" id="fineRuleModal">
+    <div class="modal">
+      <h3>📏 벌금 규칙 추가</h3>
+      <div class="form-group">
+        <label>트리거</label>
+        <select id="fineRuleTrigger">
+          <option value="chore_incomplete">집안일 미완료</option>
+          <option value="late">지각</option>
+          <option value="meeting_absent">회의 불참</option>
+          <option value="custom">커스텀</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>설명</label>
+        <input type="text" id="fineRuleDesc" placeholder="예: 설거지 안하면">
+      </div>
+      <div class="form-group">
+        <label>금액 (원)</label>
+        <input type="number" id="fineRuleAmount" value="1000" min="100" step="100">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('fineRuleModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="addFineRule()">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emoticon Modal -->
+  <div class="modal-overlay" id="emoticonModal">
+    <div class="modal">
+      <h3>😀 이모티콘 선택</h3>
+      <div class="emoticon-grid" id="emoticonGrid"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('emoticonModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="selectEmoticon()">선택</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meeting Modal -->
+  <div class="modal-overlay" id="meetingModal">
+    <div class="modal">
+      <h3>📋 회의 생성</h3>
+      <div class="form-group">
+        <label>회의 제목</label>
+        <input type="text" id="meetingTitle" placeholder="예: 이번 주 가족 회의">
+      </div>
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="meetingDate">
+      </div>
+      <div class="form-group">
+        <label>시간</label>
+        <input type="time" id="meetingTime" value="20:00">
+      </div>
+      <div class="form-group">
+        <label>안건</label>
+        <textarea id="meetingAgenda" placeholder="논의할 안건을 입력하세요..." rows="3"
+          style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('meetingModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="addMeeting()">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vote Modal -->
+  <div class="modal-overlay" id="voteModal">
+    <div class="modal">
+      <h3>🗳️ 투표 생성</h3>
+      <div class="form-group">
+        <label>투표 제목</label>
+        <input type="text" id="voteTitle" placeholder="예: 주말 외식 장소">
+      </div>
+      <div class="form-group">
+        <label>공개/익명</label>
+        <select id="voteAnonymous">
+          <option value="false">공개 투표</option>
+          <option value="true">익명 투표</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>복수 선택</label>
+        <select id="voteMultiple">
+          <option value="false">단일 선택</option>
+          <option value="true">복수 선택 가능</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>마감 기한</label>
+        <input type="datetime-local" id="voteDeadline">
+      </div>
+      <div class="form-group">
+        <label>선택지</label>
+        <div id="voteOptionsContainer">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input type="text" class="vote-option-input" placeholder="선택지 1"
+              style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input type="text" class="vote-option-input" placeholder="선택지 2"
+              style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="addVoteOptionInput()">+ 선택지 추가</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('voteModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="createVote()">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vote Detail Modal -->
+  <div class="modal-overlay" id="voteDetailModal">
+    <div class="modal">
+      <h3 id="voteDetailTitle">🗳️ 투표</h3>
+      <div id="voteDetailMeta" style="text-align:center;font-size:12px;color:var(--text-sub);margin-bottom:14px;">
+      </div>
+      <div id="voteDetailOptions"></div>
+      <div id="voteDetailVoters" style="margin-top:12px;font-size:11px;color:var(--text-sub);"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('voteDetailModal')">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div class="modal-overlay" id="adminLoginModal">
+    <div class="modal">
+      <h3>🔐 관리자 로그인</h3>
+      <form onsubmit="adminLogin(event)">
+        <div class="form-group">
+          <label>아이디</label>
+          <input type="text" id="adminUsername" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="adminPassword" autocomplete="current-password" required>
+        </div>
+        <div id="adminLoginError" style="color:var(--danger);font-size:12px;margin-bottom:12px;display:none;"></div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-outline" style="flex:1;"
+            onclick="hideModal('adminLoginModal')">취소</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">로그인</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 구성원 추가 모달 -->
+  <div class="modal-overlay" id="addMemberModal">
+    <div class="modal">
+      <h3>👤 가족 구성원 추가</h3>
+      <div class="form-group">
+        <label>이모티콘</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div id="newMemberEmoticon" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="showMemberEmoticonPicker()"><img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;"></div>
+          <span style="font-size:12px;color:var(--text-sub);">클릭하여 변경</span>
+        </div>
+        <div id="memberEmoticonPicker" style="display:none;margin-top:8px;background:var(--bg-tertiary);border-radius:8px;padding:8px;max-height:150px;overflow-y:auto;">
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;" id="memberEmoticonGrid"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>닉네임 <span style="color:var(--danger);">*</span></label>
+        <input type="text" id="newMemberNickname" placeholder="예: 아들, 딸, 할머니">
+      </div>
+      <div class="form-group">
+        <label>아이디 <span style="color:var(--danger);">*</span></label>
+        <input type="text" id="newMemberLoginId" placeholder="영문, 숫자 4자 이상">
+      </div>
+      <div class="form-group">
+        <label>비밀번호 <span style="color:var(--danger);">*</span></label>
+        <input type="password" id="newMemberPassword" placeholder="4자 이상">
+      </div>
+      <div class="form-group">
+        <label>역할</label>
+        <select id="newMemberRole">
+          <option value="member">일반 구성원</option>
+          <option value="admin">관리자</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('addMemberModal')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="addFamilyMember()">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 초대 링크 모달 -->
+  <div class="modal-overlay" id="inviteLinkModal">
+    <div class="modal" style="max-width:360px;">
+      <h3 style="text-align:center;margin-bottom:16px;">🔗 가족 초대 링크</h3>
+      <p style="text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+        아래 링크를 가족에게 공유하세요.<br>링크를 통해 가족에 참여할 수 있습니다.
+      </p>
+      <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">가족 코드</div>
+        <div id="inviteFamilyCode" style="font-size:20px;font-weight:700;color:var(--accent-purple);letter-spacing:2px;text-align:center;"></div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px;margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">초대 링크</div>
+        <input type="text" id="inviteLinkInput" readonly style="width:100%;background:transparent;border:none;font-size:12px;color:var(--text-primary);outline:none;" />
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="hideModal('inviteLinkModal')">닫기</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="copyInviteLink()">📋 복사</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 앱 설치 안내 모달 -->
+  <div class="modal-overlay" id="installGuideModal">
+    <div class="modal" style="max-width:340px;">
+      <h3 style="text-align:center;margin-bottom:20px;">📲 앱 설치 방법</h3>
+
+      <!-- iOS 안내 -->
+      <div id="iosGuide" style="display:none;">
+        <div style="background:linear-gradient(135deg,#007AFF,#5856D6);color:white;padding:16px;border-radius:12px;margin-bottom:16px;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:12px;">🍎 iPhone / iPad</div>
+          <div style="font-size:13px;line-height:1.6;">Safari 브라우저에서만 설치 가능합니다</div>
+        </div>
+
+        <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;background:var(--accent-blue);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">공유 버튼 탭</div>
+              <div style="font-size:12px;color:var(--text-sub);">화면 하단의 <span style="background:#333;padding:2px 6px;border-radius:4px;">□↑</span> 버튼</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;background:var(--accent-blue);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">"홈 화면에 추가" 선택</div>
+              <div style="font-size:12px;color:var(--text-sub);">스크롤해서 찾아주세요</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--accent-blue);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">"추가" 탭</div>
+              <div style="font-size:12px;color:var(--text-sub);">우측 상단의 추가 버튼을 탭하면 완료!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Android 안내 -->
+      <div id="androidGuide" style="display:none;">
+        <div style="background:linear-gradient(135deg,#34A853,#4285F4);color:white;padding:16px;border-radius:12px;margin-bottom:16px;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:12px;">🤖 Android</div>
+          <div style="font-size:13px;line-height:1.6;">Chrome 브라우저 권장</div>
+        </div>
+
+        <div style="background:var(--bg-secondary);border-radius:12px;padding:16px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;background:var(--accent-green);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">메뉴 버튼 탭</div>
+              <div style="font-size:12px;color:var(--text-sub);">우측 상단의 <span style="background:#333;padding:2px 6px;border-radius:4px;">⋮</span> 버튼</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="width:32px;height:32px;background:var(--accent-green);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">"앱 설치" 또는 "홈 화면에 추가"</div>
+              <div style="font-size:12px;color:var(--text-sub);">메뉴에서 선택</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:32px;height:32px;background:var(--accent-green);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">"설치" 탭</div>
+              <div style="font-size:12px;color:var(--text-sub);">확인 버튼을 누르면 완료!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 기기 선택 탭 -->
+      <div id="deviceSelector" style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn" onclick="showInstallGuide('ios')" id="iosTabBtn" style="flex:1;background:var(--bg-tertiary);">🍎 iOS</button>
+        <button class="btn" onclick="showInstallGuide('android')" id="androidTabBtn" style="flex:1;background:var(--bg-tertiary);">🤖 Android</button>
+      </div>
+
+      <button class="btn btn-outline btn-block" onclick="hideModal('installGuideModal')">닫기</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+      // ========== STATE ==========
+      var sbClient = null;
+      var sbConnecting = null;
+      var sbConfig = { url: '', key: '' };
+      let currentUser = null;
+      let currentFamily = null;
+      let calendarDate = new Date();
+      let selectedEmoticon = './imo/1.png';
+      let isAdminLoggedIn = false;
+
+      // 'test' = 전체 데이터 표시, 'prod' = 가족 생성 시 예시 데이터만 표시
+      const APP_MODE = 'prod';
+      function isTestMode() { return APP_MODE === 'test'; }
+
+      // ========== 가족 데이터 로드 함수 ==========
+      async function loadFamilyData() {
+        if (!sbClient || !currentFamily?.id) {
+          console.log('Supabase 미연결 또는 가족 ID 없음 - 로컬 데이터 사용');
+          return;
+        }
+
+        const familyId = currentFamily.id;
+        console.log('가족 데이터 로드 시작:', familyId);
+
+        try {
+          // 1. 가족 구성원 로드
+          const { data: members, error: membersErr } = await sbClient
+            .from('users')
+            .select('*')
+            .eq('family_id', familyId);
+
+          if (!membersErr && members) {
+            DEMO_MEMBERS = members.map(m => ({
+              nickname: m.nickname,
+              role: m.role || 'member',
+              emoticon: m.emoticon || './imo/1.png'
+            }));
+            console.log('구성원 로드:', DEMO_MEMBERS.length);
+          }
+
+          // 2. 집안일 로드
+          const { data: chores, error: choresErr } = await sbClient
+            .from('chores')
+            .select('*')
+            .eq('family_id', familyId);
+
+          if (!choresErr && chores) {
+            DEMO_CHORES = chores.map(c => ({
+              id: c.id,
+              title: c.title,
+              icon: c.icon || '📌',
+              desc: c.description || ''
+            }));
+            console.log('집안일 로드:', DEMO_CHORES.length);
+          }
+
+          // 3. 일정 로드
+          const { data: events, error: eventsErr } = await sbClient
+            .from('events')
+            .select('*')
+            .eq('family_id', familyId);
+
+          if (!eventsErr && events) {
+            DEMO_EVENTS = {};
+            events.forEach(ev => {
+              const date = new Date(ev.start_at);
+              const day = date.getDate();
+              const time = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+              if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
+              DEMO_EVENTS[day].push({
+                id: ev.id,
+                title: ev.title,
+                time: time,
+                scope: ev.scope || 'family',
+                recurrence: ev.recurrence_rule ? 'weekly' : 'none',
+                createdBy: ev.created_by || null  // 개인 일정 소유자
+              });
+            });
+            console.log('일정 로드 완료');
+          }
+
+          // 4. 벌금 로드
+          const { data: fines, error: finesErr } = await sbClient
+            .from('fines')
+            .select('*, users(nickname)')
+            .eq('family_id', familyId);
+
+          if (!finesErr && fines) {
+            DEMO_FINES = fines.map(f => ({
+              id: f.id,
+              user: f.users?.nickname || '알 수 없음',
+              desc: f.description || '',
+              amount: f.amount || 0,
+              status: f.paid_at ? 'paid' : 'pending'
+            }));
+            console.log('벌금 로드:', DEMO_FINES.length);
+          }
+
+          // 5. 배정 로드
+          const { data: assignments, error: assignErr } = await sbClient
+            .from('assignments')
+            .select('*, chores(title), users(nickname)')
+            .eq('family_id', familyId);
+
+          if (!assignErr && assignments) {
+            DEMO_WEEKLY_SCHEDULE = { '월': {}, '화': {}, '수': {}, '목': {}, '금': {}, '토': {}, '일': {} };
+            const dayMap = { 0: '일', 1: '월', 2: '화', 3: '수', 4: '목', 5: '금', 6: '토' };
+            assignments.forEach(a => {
+              if (a.day_of_week !== undefined && a.chores?.title && a.users?.nickname) {
+                const dayName = dayMap[a.day_of_week];
+                if (dayName) {
+                  DEMO_WEEKLY_SCHEDULE[dayName][a.chores.title] = a.users.nickname;
+                }
+              }
+            });
+            console.log('배정 로드 완료');
+          }
+
+          showToast('가족 데이터를 불러왔습니다');
+        } catch (e) {
+          console.error('가족 데이터 로드 실패:', e);
+        }
+      }
+
+      // 데이터 초기화 (새 가족 또는 Supabase 미연결 시)
+      function initEmptyFamilyData(adminName) {
+        DEMO_MEMBERS = [{ nickname: adminName, role: 'admin', emoticon: selectedEmoticon }];
+        DEMO_CHORES = [];
+        DEMO_FINES = [];
+        DEMO_EVENTS = {};
+        DEMO_MEETINGS = [];
+        DEMO_VOTES = [];
+        DEMO_WEEKLY_SCHEDULE = { '월': {}, '화': {}, '수': {}, '목': {}, '금': {}, '토': {}, '일': {} };
+        TODAY_EVENTS = [];
+        TODAY_CHORES = [];
+      }
+
+      // 이모티콘 이미지 목록 (imo 폴더)
+      const EMOTICONS = [
+        './imo/1.png', './imo/2.png', './imo/3.png', './imo/4.png', './imo/5.png',
+        './imo/6.png', './imo/7.png', './imo/8.png', './imo/9.png', './imo/10.png',
+        './imo/gp.png', './imo/gm.png'
+      ];
+
+      var DEMO_MEMBERS = [];
+
+      var DEMO_CHORES = [];
+
+      var DEMO_FINE_RULES = [
+        { trigger: 'chore_incomplete', desc: '집안일 미완료', amount: 1000 },
+        { trigger: 'late', desc: '귀가 시간 초과', amount: 2000 },
+        { trigger: 'meeting_absent', desc: '가족 회의 불참', amount: 1500 },
+      ];
+
+      var DEMO_FINES = [];
+
+      var DEMO_EVENTS = {};
+
+      let rouletteSpinHistory = [];
+      let lastWinner = null;
+
+      // 오늘의 일정 및 집안일 데이터
+      var TODAY_EVENTS = [];
+
+      var TODAY_CHORES = [];
+
+      // Phase 2 data
+      var DEMO_MEETINGS = [];
+
+      var DEMO_VOTES = [];
+
+      let selectedMeetingId = null;
+
+      var DEMO_WEEKLY_SCHEDULE = {
+        '월': {},
+        '화': {},
+        '수': {},
+        '목': {},
+        '금': {},
+        '토': {},
+        '일': {},
+      };
+
+      function resetDemoDataForProduction() {
+        const adminName = (currentUser && currentUser.nickname) ? currentUser.nickname : '가족장';
+        const adminEmoticon = (currentUser && currentUser.emoticon) ? currentUser.emoticon : './imo/1.png';
+
+        // 가족 생성 시 모든 데이터를 빈 상태로 초기화
+        DEMO_MEMBERS = [
+          { nickname: adminName, role: 'admin', emoticon: adminEmoticon },
+        ];
+
+        DEMO_CHORES = [];
+
+        DEMO_FINE_RULES = [
+          { trigger: 'chore_incomplete', desc: '집안일 미완료', amount: 1000 },
+          { trigger: 'late', desc: '귀가 시간 초과', amount: 2000 },
+        ];
+
+        DEMO_FINES = [];
+
+        DEMO_EVENTS = {};
+
+        DEMO_MEETINGS = [];
+
+        DEMO_VOTES = [];
+
+        DEMO_WEEKLY_SCHEDULE = {
+          '월': {},
+          '화': {},
+          '수': {},
+          '목': {},
+          '금': {},
+          '토': {},
+          '일': {},
+        };
+
+        TODAY_EVENTS = [];
+
+        TODAY_CHORES = [];
+
+        rouletteSpinHistory = [];
+        lastWinner = null;
+      }
+
+      // ========== UTILS ==========
+      function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+      }
+
+      window.toggleTask = function (checkbox) {
+        const item = checkbox.closest('.chore-item');
+        const isChecked = checkbox.classList.toggle('checked');
+        item.classList.toggle('checked', isChecked);
+
+        // Update badge if exists
+        const badge = item.querySelector('.badge');
+        if (badge) {
+          if (isChecked) {
+            badge.className = 'badge badge-done';
+            badge.textContent = '완료';
+          } else {
+            badge.className = 'badge badge-pending';
+            badge.textContent = '대기';
+          }
+        }
+
+        showToast(isChecked ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+      }
+
+      function showModal(id) {
+        if (id === 'rouletteModal') renderRouletteChores();
+        document.getElementById(id).classList.add('show');
+      }
+      function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+      function showPage(name) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + name).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => {
+          n.classList.toggle('active', n.dataset.page === name);
+        });
+      }
+
+      function showAuthTab(tab) {
+        const tabs = ['login', 'create', 'join'];
+        document.querySelectorAll('.auth-tab').forEach((t, i) => {
+          t.classList.toggle('active', tabs[i] === tab);
+        });
+        document.getElementById('authLogin').style.display = tab === 'login' ? 'block' : 'none';
+        document.getElementById('authCreate').style.display = tab === 'create' ? 'block' : 'none';
+        document.getElementById('authJoin').style.display = tab === 'join' ? 'block' : 'none';
+      }
+
+      function generateCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+      }
+
+      // Demo accounts for login
+      const DEMO_ACCOUNTS = [
+        { id: 'mom01', pw: '1234', nickname: '엄마', role: 'admin', emoticon: '🥰', family: '테스트 가족' },
+        { id: 'son01', pw: '1234', nickname: '아들', role: 'member', emoticon: '😄', family: '테스트 가족' },
+        { id: 'daughter01', pw: '1234', nickname: '딸', role: 'member', emoticon: '😊', family: '테스트 가족' },
+      ];
+
+      // ========== AUTH ==========
+      async function loginUser() {
+        const id = document.getElementById('loginIdInput').value.trim();
+        const pw = document.getElementById('loginPwInput').value.trim();
+        if (!id || !pw) return showToast('아이디와 비밀번호를 입력하세요');
+
+        // Check demo accounts first
+        const account = DEMO_ACCOUNTS.find(a => a.id === id && a.pw === pw);
+
+        if (account) {
+          currentFamily = { name: account.family, code: generateCode() };
+          currentUser = { nickname: account.nickname, role: account.role, emoticon: account.emoticon, loginId: account.id };
+          enterApp();
+          showToast(account.nickname + '님 환영합니다!');
+          return;
+        }
+
+        // Try Supabase login if connected
+        if (sbClient) {
+          try {
+            appendOutput('로그인 시도: ' + id, 'info');
+
+            // 1단계: 사용자 조회 (외래키 조인 없이)
+            const { data: userData, error: userError } = await sbClient.from('users')
+              .select('*')
+              .eq('login_id', id)
+              .single();
+
+            if (userError) {
+              appendOutput('사용자 조회 실패: ' + userError.message, 'error');
+            } else if (userData) {
+              // 비밀번호 확인 (클라이언트에서 비교)
+              if (userData.password_hash !== pw) {
+                appendOutput('비밀번호 불일치', 'error');
+              } else {
+                // 2단계: 가족 정보 조회
+                const { data: familyData, error: familyError } = await sbClient.from('families')
+                  .select('*')
+                  .eq('id', userData.family_id)
+                  .single();
+
+                if (familyError) {
+                  appendOutput('가족 정보 조회 실패: ' + familyError.message, 'error');
+                } else if (familyData) {
+                  currentFamily = { name: familyData.family_name, code: familyData.family_code, id: familyData.id };
+                  currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || './imo/1.png', loginId: id };
+                  enterApp();
+                  showToast(userData.nickname + '님 환영합니다!');
+                  return;
+                }
+              }
+            }
+          } catch (e) {
+            appendOutput('로그인 에러: ' + e.message, 'error');
+            console.error('로그인 에러:', e);
+          }
+        }
+
+        showToast('아이디 또는 비밀번호가 일치하지 않습니다');
+      }
+
+      // 가족명 중복체크 상태
+      let familyNameChecked = false;
+      let checkedFamilyName = '';
+
+      // 기존 가족명 목록 (데모용, 실제로는 DB에서 조회)
+      const EXISTING_FAMILY_NAMES = ['테스트 가족', '행복한 가족', '우리 가족', '김씨 가족', '이씨네'];
+
+      async function checkFamilyName() {
+        const name = document.getElementById('familyNameInput').value.trim();
+        const resultEl = document.getElementById('familyNameCheckResult');
+
+        if (!name) {
+          showToast('가족 이름을 입력하세요');
+          return;
+        }
+
+        if (name.length < 2) {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--danger);">⚠️ 가족 이름은 2자 이상이어야 합니다</span>';
+          familyNameChecked = false;
+          return;
+        }
+
+        // Supabase 연결된 경우 DB에서 확인
+        if (sbClient) {
+          try {
+            appendOutput('가족명 중복 확인: ' + name, 'info');
+            const { data, error } = await sbClient.from('families')
+              .select('family_name')
+              .eq('family_name', name);
+
+            if (error) {
+              appendOutput('DB 에러: ' + error.message, 'error');
+              // DB 에러 시 로컬 체크로 폴백
+              checkLocalFamilyName(name, resultEl);
+              return;
+            }
+
+            if (data && data.length > 0) {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML = '<span style="color:var(--danger);">❌ 이미 사용 중인 가족 이름입니다</span>';
+              familyNameChecked = false;
+              showToast('❌ 이미 사용 중인 가족 이름입니다');
+              appendOutput('가족명 중복: ' + name);
+            } else {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML = '<span style="color:var(--success);">✓ 사용 가능한 가족 이름입니다</span>';
+              familyNameChecked = true;
+              checkedFamilyName = name;
+              showToast('✓ 사용 가능한 가족 이름입니다!');
+              appendOutput('가족명 사용 가능: ' + name);
+            }
+          } catch (e) {
+            appendOutput('에러: ' + e.message, 'error');
+            checkLocalFamilyName(name, resultEl);
+          }
+        } else {
+          // Supabase 미연결 시 로컬 체크
+          checkLocalFamilyName(name, resultEl);
+        }
+      }
+
+      function checkLocalFamilyName(name, resultEl) {
+        const isDuplicate = EXISTING_FAMILY_NAMES.some(
+          existing => existing.toLowerCase() === name.toLowerCase()
+        );
+
+        if (isDuplicate) {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--danger);">❌ 이미 사용 중인 가족 이름입니다</span>';
+          familyNameChecked = false;
+          showToast('❌ 이미 사용 중인 가족 이름입니다');
+        } else {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--success);">✓ 사용 가능한 가족 이름입니다</span>';
+          familyNameChecked = true;
+          checkedFamilyName = name;
+          showToast('✓ 사용 가능한 가족 이름입니다!');
+        }
+      }
+
+      function resetFamilyNameCheck() {
+        familyNameChecked = false;
+        checkedFamilyName = '';
+        const resultEl = document.getElementById('familyNameCheckResult');
+        if (resultEl) {
+          resultEl.style.display = 'none';
+          resultEl.innerHTML = '';
+        }
+      }
+
+      // 아이디 중복체크 상태
+      let userIdChecked = false;
+      let checkedUserId = '';
+
+      async function checkUserId(mode) {
+        const inputId = mode === 'create' ? 'createUserIdInput' : 'joinUserIdInput';
+        const resultId = mode === 'create' ? 'createUserIdCheckResult' : 'joinUserIdCheckResult';
+        const userId = document.getElementById(inputId).value.trim();
+        const resultEl = document.getElementById(resultId);
+
+        if (!userId) {
+          showToast('아이디를 입력하세요');
+          return;
+        }
+
+        // 아이디 형식 검증 (영문, 숫자만, 4자 이상)
+        if (!/^[a-zA-Z0-9]{4,}$/.test(userId)) {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--danger);">⚠️ 영문, 숫자만 4자 이상 입력하세요</span>';
+          userIdChecked = false;
+          return;
+        }
+
+        // Supabase 연결된 경우 DB에서 확인
+        if (sbClient) {
+          try {
+            appendOutput('아이디 중복 확인: ' + userId, 'info');
+            const { data, error } = await sbClient.from('users')
+              .select('login_id')
+              .eq('login_id', userId);
+
+            if (error) {
+              appendOutput('DB 에러: ' + error.message, 'error');
+              checkLocalUserId(userId, resultEl);
+              return;
+            }
+
+            if (data && data.length > 0) {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML = '<span style="color:var(--danger);">❌ 이미 사용 중인 아이디입니다</span>';
+              userIdChecked = false;
+              showToast('❌ 이미 사용 중인 아이디입니다');
+            } else {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML = '<span style="color:var(--success);">✓ 사용 가능한 아이디입니다</span>';
+              userIdChecked = true;
+              checkedUserId = userId;
+              showToast('✓ 사용 가능한 아이디입니다!');
+            }
+          } catch (e) {
+            appendOutput('에러: ' + e.message, 'error');
+            checkLocalUserId(userId, resultEl);
+          }
+        } else {
+          checkLocalUserId(userId, resultEl);
+        }
+      }
+
+      function checkLocalUserId(userId, resultEl) {
+        // DEMO_ACCOUNTS에서 중복 확인
+        const isDuplicate = DEMO_ACCOUNTS.some(
+          acc => acc.id.toLowerCase() === userId.toLowerCase()
+        );
+
+        if (isDuplicate) {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--danger);">❌ 이미 사용 중인 아이디입니다</span>';
+          userIdChecked = false;
+          showToast('❌ 이미 사용 중인 아이디입니다');
+        } else {
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = '<span style="color:var(--success);">✓ 사용 가능한 아이디입니다</span>';
+          userIdChecked = true;
+          checkedUserId = userId;
+          showToast('✓ 사용 가능한 아이디입니다!');
+        }
+      }
+
+      function resetUserIdCheck() {
+        userIdChecked = false;
+        checkedUserId = '';
+        ['createUserIdCheckResult', 'joinUserIdCheckResult'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.style.display = 'none';
+            el.innerHTML = '';
+          }
+        });
+      }
+
+      async function createFamily() {
+        const name = document.getElementById('familyNameInput').value.trim();
+        const userId = document.getElementById('createUserIdInput').value.trim();
+        const nick = document.getElementById('nicknameInput').value.trim();
+        const pw = document.getElementById('createPasswordInput').value;
+
+        if (!name || !userId || !nick || !pw) return showToast('모든 필드를 입력하세요');
+
+        // 가족명 중복체크 확인
+        if (!familyNameChecked || checkedFamilyName !== name) {
+          showToast('가족 이름 중복확인을 해주세요');
+          return;
+        }
+
+        // 아이디 중복체크 확인
+        if (!userIdChecked || checkedUserId !== userId) {
+          showToast('아이디 중복확인을 해주세요');
+          return;
+        }
+
+        // 비밀번호 길이 확인
+        if (pw.length < 4) {
+          showToast('비밀번호는 4자 이상이어야 합니다');
+          return;
+        }
+
+        // Supabase 연결 시 생성 직전 한 번 더 중복 확인
+        if (sbClient) {
+          try {
+            const { data: existingFamily, error: checkError } = await sbClient.from('families')
+              .select('family_name')
+              .eq('family_name', name);
+
+            if (checkError) {
+              appendOutput('중복 확인 에러: ' + checkError.message, 'error');
+              showToast('중복 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
+              return;
+            }
+
+            if (existingFamily && existingFamily.length > 0) {
+              showToast('❌ 이미 사용 중인 가족 이름입니다. 다른 이름을 선택해주세요.');
+              familyNameChecked = false;
+              checkedFamilyName = '';
+              const resultEl = document.getElementById('familyNameCheckResult');
+              if (resultEl) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = '<span style="color:var(--danger);">❌ 이미 사용 중인 가족 이름입니다</span>';
+              }
+              return;
+            }
+          } catch (e) {
+            appendOutput('중복 확인 에러: ' + e.message, 'error');
+            showToast('중복 확인 중 오류가 발생했습니다.');
+            return;
+          }
+        }
+
+        const code = generateCode();
+        currentFamily = { name, code };
+        currentUser = { id: userId, nickname: nick, role: 'admin', emoticon: '😎' };
+
+        // DEMO_ACCOUNTS에 새 계정 추가
+        DEMO_ACCOUNTS.push({
+          id: userId,
+          pw: pw,
+          nickname: nick,
+          role: 'admin',
+          emoticon: '😎',
+          family: name
+        });
+
+        if (!isTestMode()) resetDemoDataForProduction();
+
+        if (sbClient) {
+          try {
+            appendOutput('가족 생성 시도: ' + name, 'info');
+
+            // UUID 생성
+            const familyId = crypto.randomUUID();
+            const newUserId = crypto.randomUUID();
+
+            const { data, error } = await sbClient.from('families').insert({
+              id: familyId,
+              family_name: name,
+              family_code: code
+            }).select();
+
+            if (error) {
+              appendOutput('DB 에러: ' + error.message, 'error');
+              if (error.message.includes('duplicate') || error.code === '23505') {
+                showToast('❌ 이미 사용 중인 가족 이름입니다.');
+              } else {
+                showToast('가족 생성 중 오류가 발생했습니다: ' + error.message);
+              }
+              return;  // 모든 에러에서 return
+            }
+
+            if (data && data[0]) {
+              appendOutput('가족 생성 성공: ' + JSON.stringify(data));
+              currentFamily.id = data[0].id;  // 가족 ID 저장
+              EXISTING_FAMILY_NAMES.push(name);
+
+              // 생성자를 users 테이블에 등록
+              const { error: userErr } = await sbClient.from('users').insert({
+                id: newUserId,
+                family_id: data[0].id,
+                nickname: nick,
+                login_id: userId,
+                password_hash: pw,
+                role: 'admin',
+                emoticon: '😎'
+              });
+              if (userErr) {
+                appendOutput('사용자 등록 에러: ' + userErr.message, 'error');
+                showToast('사용자 등록 중 오류가 발생했습니다: ' + userErr.message);
+                return;
+              }
+              appendOutput('사용자 등록 성공: ' + nick);
+            } else {
+              appendOutput('가족 생성 실패: 데이터 없음', 'error');
+              showToast('가족 생성에 실패했습니다.');
+              return;
+            }
+          } catch (e) {
+            appendOutput('에러: ' + e.message, 'error');
+            showToast('오류가 발생했습니다: ' + e.message);
+            return;
+          }
+        } else {
+          appendOutput('Supabase 미연결 - 로컬 모드로 진행', 'info');
+          EXISTING_FAMILY_NAMES.push(name);
+        }
+
+        // 중복체크 상태 초기화
+        familyNameChecked = false;
+        checkedFamilyName = '';
+        userIdChecked = false;
+        checkedUserId = '';
+
+        // 새 가족 생성 시 모든 데이터 초기화
+        resetDemoDataForProduction();
+
+        enterApp();
+        showToast('가족이 생성되었습니다! 코드: ' + code);
+      }
+
+      async function joinFamily() {
+        const code = document.getElementById('familyCodeInput').value.trim().toUpperCase();
+        const userId = document.getElementById('joinUserIdInput').value.trim();
+        const nick = document.getElementById('joinNicknameInput').value.trim();
+        const pw = document.getElementById('joinPasswordInput').value;
+
+        if (!code || !userId || !nick || !pw) return showToast('모든 필드를 입력하세요');
+
+        // 아이디 중복체크 확인
+        if (!userIdChecked || checkedUserId !== userId) {
+          showToast('아이디 중복확인을 해주세요');
+          return;
+        }
+
+        // 비밀번호 길이 확인
+        if (pw.length < 4) {
+          showToast('비밀번호는 4자 이상이어야 합니다');
+          return;
+        }
+
+        let familyName = '참여한 가족';
+
+        if (sbClient) {
+          try {
+            appendOutput('가족 참여 시도: 코드=' + code, 'info');
+            const { data, error } = await sbClient.from('families')
+              .select('*').eq('family_code', code).single();
+            if (error) { appendOutput('가족 코드 조회 실패: ' + error.message, 'error'); return showToast('유효하지 않은 코드입니다'); }
+            currentFamily = { name: data.family_name, code: data.family_code, id: data.id };
+            familyName = data.family_name;
+            appendOutput('가족 참여 성공: ' + data.family_name);
+
+            // 참여자를 users 테이블에 등록
+            const newUserId = crypto.randomUUID();
+            const { error: userErr } = await sbClient.from('users').insert({
+              id: newUserId,
+              family_id: data.id,
+              nickname: nick,
+              login_id: userId,
+              password_hash: pw,
+              role: 'member',
+              emoticon: '😊'
+            });
+            if (userErr) appendOutput('사용자 등록 에러: ' + userErr.message, 'error');
+            else appendOutput('사용자 등록 성공: ' + nick);
+          } catch (e) { appendOutput('에러: ' + e.message, 'error'); return; }
+        } else {
+          currentFamily = { name: familyName, code };
+        }
+
+        currentUser = { id: userId, nickname: nick, role: 'member', emoticon: '😊' };
+
+        // DEMO_ACCOUNTS에 새 계정 추가
+        DEMO_ACCOUNTS.push({
+          id: userId,
+          pw: pw,
+          nickname: nick,
+          role: 'member',
+          emoticon: '😊',
+          family: familyName
+        });
+
+        // 중복체크 상태 초기화
+        userIdChecked = false;
+        checkedUserId = '';
+
+        enterApp();
+        showToast('가족에 참여했습니다!');
+      }
+
+      function quickLogin() {
+        currentFamily = { name: '테스트 가족', code: generateCode() };
+        currentUser = { nickname: '아빠', role: 'admin', emoticon: '😎' };
+        enterApp();
+        showToast('더미 데이터로 로그인했습니다');
+      }
+
+      async function enterApp() {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('headerFamilyName').textContent = currentFamily.name;
+        document.getElementById('headerCode').textContent = '코드: ' + currentFamily.code;
+        document.getElementById('settingsNickname').value = currentUser.nickname;
+        document.getElementById('profileEmoticon').innerHTML = renderEmoticonImg(currentUser.emoticon, 48);
+
+        const today = new Date();
+        document.getElementById('todayDate').textContent =
+          `${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}`;
+
+        // Supabase에서 가족 데이터 로드
+        await loadFamilyData();
+
+        try { renderTodayEvents(); } catch (e) { console.error('renderTodayEvents', e); }
+        try { renderTodayChores(); } catch (e) { console.error('renderTodayChores', e); }
+        try { renderFamilyMembers(); } catch (e) { console.error('renderFamilyMembers', e); }
+        try { updateMemberButtons(); } catch (e) { console.error('updateMemberButtons', e); }
+        try { renderHomeMeetingCard(); } catch (e) { console.error('renderHomeMeetingCard', e); }
+        try { renderHomeVoteCard(); } catch (e) { console.error('renderHomeVoteCard', e); }
+        try { renderHomeFineCard(); } catch (e) { console.error('renderHomeFineCard', e); }
+        try { renderCalendar(); } catch (e) { console.error('renderCalendar', e); }
+        try { renderChores(); } catch (e) { console.error('renderChores', e); }
+        try { renderFines(); } catch (e) { console.error('renderFines', e); }
+        try { renderEmoticonGrid(); } catch (e) { console.error('renderEmoticonGrid', e); }
+        try { renderRouletteParticipants(); renderRouletteChores(); } catch (e) { console.error('renderRoulette', e); }
+        try { renderMeetings(); } catch (e) { console.error('renderMeetings', e); }
+        try { renderVotes(); } catch (e) { console.error('renderVotes', e); }
+        try { renderStats(); } catch (e) { console.error('renderStats', e); }
+
+        // 관리자만 테스트 패널 표시 (admin/family4u 로그인 시에만)
+        const adminPanels = document.getElementById('adminTestPanels');
+        if (adminPanels) {
+          adminPanels.style.display = isAdminLoggedIn ? 'block' : 'none';
+        }
+      }
+
+      function logout() {
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('authScreen').style.display = 'flex';
+        currentUser = null;
+        currentFamily = null;
+        showToast('로그아웃되었습니다');
+      }
+
+      // ========== RENDER ==========
+      function renderTodayEvents() {
+        const el = document.getElementById('todayEvents');
+        if (!el) return;
+
+        // 개인 일정 필터링: 가족 일정은 모두 표시, 개인 일정은 본인 것만 표시
+        const currentNickname = currentUser ? currentUser.nickname : null;
+        const filteredEvents = TODAY_EVENTS.filter(function (e) {
+          if (e.scope === '가족' || e.scope === 'family') return true;
+          if (e.scope === '개인' || e.scope === 'personal') {
+            return !e.createdBy || e.createdBy === currentNickname;
+          }
+          return true;
+        });
+
+        if (filteredEvents.length === 0) {
+          el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">오늘 일정이 없습니다</div>';
+          return;
+        }
+        el.innerHTML = filteredEvents.map(e => `
+          <div class="chore-item${e.done ? ' checked' : ''}" data-id="${e.id}">
+            <div class="task-checkbox${e.done ? ' checked' : ''}" onclick="toggleTodayEvent('${e.id}')"></div>
+            <span class="chore-icon">${e.icon}</span>
+            <div class="chore-info">
+              <div class="chore-title">${e.title}</div>
+              <div class="chore-meta">${e.time} · ${e.scope}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function renderTodayChores() {
+        const el = document.getElementById('todayChores');
+        if (!el) return;
+        if (TODAY_CHORES.length === 0) {
+          el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">오늘 집안일이 없습니다</div>';
+          return;
+        }
+        el.innerHTML = TODAY_CHORES.map(c => `
+          <div class="chore-item${c.done ? ' checked' : ''}" data-id="${c.id}">
+            <div class="task-checkbox${c.done ? ' checked' : ''}" onclick="toggleTodayChore('${c.id}')"></div>
+            <span class="chore-icon">${c.icon}</span>
+            <div class="chore-info">
+              <div class="chore-title">${c.title}</div>
+              <div class="chore-meta">담당: ${c.assignee} · ${c.deadline}</div>
+            </div>
+            <span class="badge ${c.done ? 'badge-done' : 'badge-pending'}">${c.done ? '완료' : '대기'}</span>
+          </div>
+        `).join('');
+      }
+
+      // 홈 화면 카드 렌더링 함수들
+      function renderHomeMeetingCard() {
+        const el = document.getElementById('homeMeetingCard');
+        if (!el) return;
+
+        const upcomingMeetings = DEMO_MEETINGS.filter(m => m.status === 'upcoming');
+        if (upcomingMeetings.length === 0) {
+          el.innerHTML = '';  // 회의 없으면 카드 숨김
+          return;
+        }
+
+        const meeting = upcomingMeetings[0];
+        const agendaCount = meeting.agenda ? meeting.agenda.split('\n').length : 0;
+        el.innerHTML = `
+          <div class="card" style="border-left: 4px solid var(--primary);">
+            <div class="card-title">📋 다가오는 회의</div>
+            <p style="font-size:13px;font-weight:600;">${meeting.title}</p>
+            <p style="font-size:11px;color:var(--text-sub);margin-top:2px;">${meeting.date} ${meeting.time} · 안건: ${agendaCount}건</p>
+            <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="showPage('meetings')">회의 보기</button>
+          </div>
+        `;
+      }
+
+      function renderHomeVoteCard() {
+        const el = document.getElementById('homeVoteCard');
+        if (!el) return;
+
+        const activeVotes = DEMO_VOTES.filter(v => v.status === 'active');
+        if (activeVotes.length === 0) {
+          el.innerHTML = '';  // 투표 없으면 카드 숨김
+          return;
+        }
+
+        const vote = activeVotes[0];
+        const totalVotes = vote.options.reduce((sum, opt) => sum + opt.votes.length, 0);
+        const deadline = new Date(vote.deadline);
+        const deadlineStr = `${deadline.getMonth() + 1}/${deadline.getDate()} ${deadline.getHours()}:${String(deadline.getMinutes()).padStart(2, '0')}`;
+        el.innerHTML = `
+          <div class="card" style="border-left: 4px solid var(--warning);">
+            <div class="card-title">🗳️ 진행 중인 투표</div>
+            <p style="font-size:13px;font-weight:600;">${vote.title}</p>
+            <p style="font-size:11px;color:var(--text-sub);margin-top:2px;">마감: ${deadlineStr} · ${totalVotes}명 참여</p>
+            <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="showPage('votes')">투표하기</button>
+          </div>
+        `;
+      }
+
+      function renderHomeFineCard() {
+        const el = document.getElementById('homeFineCard');
+        if (!el) return;
+
+        const pendingFines = DEMO_FINES.filter(f => f.status === 'pending');
+        if (pendingFines.length === 0) {
+          el.innerHTML = '';  // 벌금 없으면 카드 숨김
+          return;
+        }
+
+        const totalAmount = pendingFines.reduce((sum, f) => sum + f.amount, 0);
+        const finesByUser = {};
+        pendingFines.forEach(f => {
+          finesByUser[f.user] = (finesByUser[f.user] || 0) + f.amount;
+        });
+        const fineDetails = Object.entries(finesByUser).map(([user, amount]) => `${user}: ${amount.toLocaleString()}원`).join(' / ');
+
+        el.innerHTML = `
+          <div class="card" style="border-left: 4px solid var(--danger);">
+            <div class="card-title">💰 벌금 알림</div>
+            <p style="font-size:13px;">이번 달 미납 벌금: <strong style="color:var(--danger);">${totalAmount.toLocaleString()}원</strong></p>
+            <p style="font-size:11px;color:var(--text-sub);margin-top:4px;">${fineDetails}</p>
+          </div>
+        `;
+      }
+
+      window.toggleTodayEvent = function (id) {
+        const item = TODAY_EVENTS.find(e => e.id === id);
+        if (item) {
+          item.done = !item.done;
+          renderTodayEvents();
+          showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+        }
+      };
+
+      window.toggleTodayChore = function (id) {
+        const item = TODAY_CHORES.find(c => c.id === id);
+        if (item) {
+          item.done = !item.done;
+          renderTodayChores();
+          showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+        }
+      };
+
+      // 이모티콘 렌더링 헬퍼 함수
+      function renderEmoticonImg(emoticon, size = 48) {
+        if (emoticon && emoticon.startsWith('./imo/')) {
+          return `<img src="${emoticon}" alt="이모티콘" style="max-width:${size}px;max-height:${size}px;width:100%;height:100%;object-fit:contain;">`;
+        }
+        // 기존 이모지 호환
+        return `<img src="./imo/1.png" alt="이모티콘" style="max-width:${size}px;max-height:${size}px;width:100%;height:100%;object-fit:contain;">`;
+      }
+
+      function renderFamilyMembers() {
+        const el = document.getElementById('familyMembers');
+        if (DEMO_MEMBERS.length === 0) {
+          el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">아직 구성원이 없습니다</div>';
+          return;
+        }
+        el.innerHTML = `<div class="family-members-grid">` + DEMO_MEMBERS.map(m => `
+    <div class="family-member-card">
+      <div class="avatar-large">${renderEmoticonImg(m.emoticon, 64)}</div>
+      <div class="member-name">${m.nickname}</div>
+      <div class="member-role">${m.role === 'admin' ? '관리자' : '구성원'}</div>
+    </div>
+  `).join('') + `</div>`;
+      }
+
+      // 구성원 추가용 이모티콘 선택
+      let newMemberEmoticon = './imo/1.png';
+
+      function showMemberEmoticonPicker() {
+        const picker = document.getElementById('memberEmoticonPicker');
+        const grid = document.getElementById('memberEmoticonGrid');
+        if (picker.style.display === 'none') {
+          grid.innerHTML = EMOTICONS.map(e =>
+            `<div style="cursor:pointer;padding:4px;${e === newMemberEmoticon ? 'transform:scale(1.15);filter:drop-shadow(0 2px 4px rgba(77,182,229,0.5));' : ''}" onclick="selectMemberEmoticon('${e}')">
+              <img src="${e}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
+            </div>`
+          ).join('');
+          picker.style.display = 'block';
+        } else {
+          picker.style.display = 'none';
+        }
+      }
+
+      function selectMemberEmoticon(emoticon) {
+        newMemberEmoticon = emoticon;
+        document.getElementById('newMemberEmoticon').innerHTML = `<img src="${emoticon}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">`;
+        document.getElementById('memberEmoticonPicker').style.display = 'none';
+      }
+
+      // 초대 링크 표시
+      function showInviteLink() {
+        if (!currentFamily?.code) {
+          return showToast('가족 코드가 없습니다');
+        }
+
+        const baseUrl = window.location.origin + window.location.pathname;
+        const inviteLink = baseUrl + '?invite=' + currentFamily.code;
+
+        document.getElementById('inviteFamilyCode').textContent = currentFamily.code;
+        document.getElementById('inviteLinkInput').value = inviteLink;
+        showModal('inviteLinkModal');
+      }
+
+      // 초대 링크 복사
+      function copyInviteLink() {
+        const linkInput = document.getElementById('inviteLinkInput');
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999);
+
+        try {
+          navigator.clipboard.writeText(linkInput.value);
+          showToast('📋 초대 링크가 복사되었습니다!');
+        } catch (e) {
+          document.execCommand('copy');
+          showToast('📋 초대 링크가 복사되었습니다!');
+        }
+      }
+
+      // 초대 링크로 접속 시 자동으로 가족 코드 입력
+      function checkInviteLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = urlParams.get('invite');
+
+        if (inviteCode) {
+          // 가족 참여 탭으로 이동하고 코드 자동 입력
+          showAuthTab('join');
+          const codeInput = document.getElementById('familyCodeInput');
+          if (codeInput) {
+            codeInput.value = inviteCode;
+          }
+          showToast('초대 코드가 자동 입력되었습니다!');
+
+          // URL에서 invite 파라미터 제거 (히스토리 깔끔하게)
+          const newUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }
+      }
+
+      // 구성원 추가 버튼 표시/숨김 (관리자만)
+      function updateMemberButtons() {
+        const addBtn = document.getElementById('addMemberBtn');
+        const inviteBtn = document.getElementById('inviteLinkBtn');
+
+        if (addBtn) {
+          // 관리자만 추가 버튼 보이기
+          addBtn.style.display = currentUser?.role === 'admin' ? 'inline-block' : 'none';
+        }
+        if (inviteBtn) {
+          // 초대 링크는 모든 구성원에게 보이기
+          inviteBtn.style.display = currentFamily?.code ? 'inline-block' : 'none';
+        }
+      }
+
+      async function addFamilyMember() {
+        // 관리자(가족 생성자)만 구성원 추가 가능
+        if (currentUser?.role !== 'admin') {
+          return showToast('가족 생성자만 구성원을 추가할 수 있습니다');
+        }
+
+        const nickname = document.getElementById('newMemberNickname').value.trim();
+        const loginId = document.getElementById('newMemberLoginId').value.trim();
+        const password = document.getElementById('newMemberPassword').value;
+        const role = document.getElementById('newMemberRole').value;
+
+        // 유효성 검사
+        if (!nickname) return showToast('닉네임을 입력하세요');
+        if (!loginId || loginId.length < 4) return showToast('아이디는 4자 이상이어야 합니다');
+        if (!password || password.length < 4) return showToast('비밀번호는 4자 이상이어야 합니다');
+
+        // 아이디 중복 체크 (로컬)
+        const existingAccount = DEMO_ACCOUNTS.find(a => a.id === loginId);
+        if (existingAccount) return showToast('이미 사용 중인 아이디입니다');
+
+        // 닉네임 중복 체크 (같은 가족 내)
+        const existingMember = DEMO_MEMBERS.find(m => m.nickname === nickname);
+        if (existingMember) return showToast('이미 사용 중인 닉네임입니다');
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            // 아이디 중복 체크 (DB)
+            const { data: existingUser } = await sbClient.from('users')
+              .select('login_id')
+              .eq('login_id', loginId)
+              .single();
+
+            if (existingUser) return showToast('이미 사용 중인 아이디입니다');
+
+            // 사용자 등록
+            const newUserId = crypto.randomUUID();
+            const { error } = await sbClient.from('users').insert({
+              id: newUserId,
+              family_id: currentFamily.id,
+              nickname: nickname,
+              login_id: loginId,
+              password_hash: password,
+              role: role,
+              emoticon: newMemberEmoticon
+            });
+
+            if (error) {
+              console.error('구성원 추가 실패:', error);
+              return showToast('구성원 추가에 실패했습니다');
+            }
+          } catch (e) {
+            console.error('구성원 추가 에러:', e);
+          }
+        }
+
+        // 로컬 데이터에 추가
+        DEMO_MEMBERS.push({
+          nickname: nickname,
+          role: role,
+          emoticon: newMemberEmoticon
+        });
+
+        // DEMO_ACCOUNTS에도 추가
+        DEMO_ACCOUNTS.push({
+          id: loginId,
+          pw: password,
+          nickname: nickname,
+          role: role,
+          emoticon: newMemberEmoticon,
+          family: currentFamily ? currentFamily.name : ''
+        });
+
+        // UI 업데이트
+        renderFamilyMembers();
+        hideModal('addMemberModal');
+
+        // 폼 초기화
+        document.getElementById('newMemberNickname').value = '';
+        document.getElementById('newMemberLoginId').value = '';
+        document.getElementById('newMemberPassword').value = '';
+        document.getElementById('newMemberRole').value = 'member';
+        newMemberEmoticon = './imo/1.png';
+        document.getElementById('newMemberEmoticon').innerHTML = '<img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">';
+
+        showToast(`${nickname}님이 추가되었습니다!`);
+      }
+
+      function renderCalendar() {
+        const year = calendarDate.getFullYear();
+        const month = calendarDate.getMonth();
+        document.getElementById('calendarMonth').textContent = `${year}년 ${month + 1}월`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+
+        let html = ['일', '월', '화', '수', '목', '금', '토'].map(d =>
+          `<div class="day-header">${d}</div>`).join('');
+
+        const prevDays = new Date(year, month, 0).getDate();
+        for (let i = firstDay - 1; i >= 0; i--)
+          html += `<div class="day other-month">${prevDays - i}</div>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+          const hasEvent = DEMO_EVENTS[d];
+          html += `<div class="day${isToday ? ' today' : ''}" onclick="selectDate(${d})">
+      ${d}${hasEvent ? '<div class="dot"></div>' : ''}
+    </div>`;
+        }
+
+        const remaining = 42 - firstDay - daysInMonth;
+        for (let i = 1; i <= remaining; i++)
+          html += `<div class="day other-month">${i}</div>`;
+
+        document.getElementById('calendarGrid').innerHTML = html;
+      }
+
+      function changeMonth(delta) {
+        calendarDate.setMonth(calendarDate.getMonth() + delta);
+        renderCalendar();
+      }
+
+      function selectDate(day) {
+        const allEvents = DEMO_EVENTS[day];
+        const el = document.getElementById('selectedDateEvents');
+        if (!allEvents || allEvents.length === 0) {
+          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>';
+          return;
+        }
+
+        // 개인 일정 필터링: 가족 일정은 모두 표시, 개인 일정은 본인 것만 표시
+        const currentNickname = currentUser ? currentUser.nickname : null;
+        const events = allEvents.filter(function (e) {
+          if (e.scope === 'family') return true;  // 가족 일정은 모두 표시
+          if (e.scope === 'personal') {
+            // 개인 일정은 본인 것만 표시 (createdBy가 없는 기존 데이터는 모두 표시)
+            return !e.createdBy || e.createdBy === currentNickname;
+          }
+          return true;
+        });
+
+        if (events.length === 0) {
+          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>';
+          return;
+        }
+
+        el.innerHTML = events.map(function (e) {
+          var recLabel = e.recurrence && e.recurrence !== 'none' ? ' · 🔁 ' + (RECURRENCE_LABELS[e.recurrence] || '반복') : '';
+          return '<div class="chore-item">' +
+            '<span class="chore-icon">' + (e.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤') + '</span>' +
+            '<div class="chore-info">' +
+            '<div class="chore-title">' + e.title + '</div>' +
+            '<div class="chore-meta">' + e.time + ' · ' + (e.scope === 'family' ? '가족' : '개인') + recLabel + '</div>' +
+            '</div>' +
+            '</div>';
+        }).join('');
+      }
+
+      function renderChores() {
+        document.getElementById('choreList').innerHTML = DEMO_CHORES.map((c, i) => `
+    <div class="chore-item">
+      <span class="chore-icon">${c.icon}</span>
+      <div class="chore-info">
+        <div class="chore-title">${c.title}</div>
+        <div class="chore-meta">${c.desc}</div>
+      </div>
+    </div>
+  `).join('');
+        renderRouletteHistory();
+      }
+
+      function renderRouletteHistory() {
+        const el = document.getElementById('rouletteHistory');
+        if (rouletteSpinHistory.length === 0) {
+          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:12px;">아직 기록이 없습니다</p>';
+          return;
+        }
+        el.innerHTML = rouletteSpinHistory.slice(-10).reverse().map(h => `
+    <div class="chore-item">
+      <span class="chore-icon">🎲</span>
+      <div class="chore-info">
+        <div class="chore-title">${h.chore} → ${h.winner}</div>
+        <div class="chore-meta">${h.time} · 참여자: ${h.participants.join(', ')}</div>
+      </div>
+    </div>
+  `).join('');
+      }
+
+      function renderFines() {
+        // Rules
+        document.getElementById('fineRulesList').innerHTML = DEMO_FINE_RULES.map(r => `
+    <div class="chore-item">
+      <span class="chore-icon">📏</span>
+      <div class="chore-info">
+        <div class="chore-title">${r.desc}</div>
+        <div class="chore-meta">${r.trigger} · ${r.amount.toLocaleString()}원</div>
+      </div>
+    </div>
+  `).join('');
+
+        // History
+        document.getElementById('fineHistoryList').innerHTML = DEMO_FINES.map(f => `
+    <div class="chore-item">
+      <span class="chore-icon">${f.status === 'paid' ? '✅' : '⏳'}</span>
+      <div class="chore-info">
+        <div class="chore-title">${f.user} - ${f.desc}</div>
+        <div class="chore-meta">${f.amount.toLocaleString()}원</div>
+      </div>
+      <span class="badge ${f.status === 'paid' ? 'badge-done' : 'badge-pending'}">${f.status === 'paid' ? '납부' : '미납'}</span>
+    </div>
+  `).join('');
+
+        // Chart
+        const memberFines = {};
+        DEMO_MEMBERS.forEach(m => memberFines[m.nickname] = 0);
+        DEMO_FINES.forEach(f => memberFines[f.user] = (memberFines[f.user] || 0) + f.amount);
+        const maxFine = Math.max(...Object.values(memberFines), 1);
+
+        document.getElementById('fineChart').innerHTML = Object.entries(memberFines).map(([name, amount]) => `
+    <div class="bar-col">
+      <div class="bar-value">${(amount / 1000).toFixed(0)}k</div>
+      <div class="bar" style="height:${(amount / maxFine) * 100}px;${amount === 0 ? 'background:#ddd;' : ''}"></div>
+      <div class="bar-label">${name}</div>
+    </div>
+  `).join('');
+      }
+
+      function renderEmoticonGrid() {
+        document.getElementById('emoticonGrid').innerHTML = EMOTICONS.map(e => `
+    <div class="emoticon-item${e === selectedEmoticon ? ' selected' : ''}" onclick="pickEmoticon(this, '${e}')">
+      <img src="${e}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
+    </div>
+  `).join('');
+      }
+
+      function pickEmoticon(el, emoji) {
+        document.querySelectorAll('.emoticon-item').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedEmoticon = emoji;
+      }
+
+      async function selectEmoticon() {
+        document.getElementById('profileEmoticon').innerHTML = renderEmoticonImg(selectedEmoticon, 48);
+        if (currentUser) {
+          currentUser.emoticon = selectedEmoticon;
+
+          // DEMO_MEMBERS에서도 업데이트
+          const memberIdx = DEMO_MEMBERS.findIndex(m => m.nickname === currentUser.nickname);
+          if (memberIdx !== -1) {
+            DEMO_MEMBERS[memberIdx].emoticon = selectedEmoticon;
+          }
+
+          // DEMO_ACCOUNTS에서도 업데이트
+          const accountIdx = DEMO_ACCOUNTS.findIndex(a => a.nickname === currentUser.nickname);
+          if (accountIdx !== -1) {
+            DEMO_ACCOUNTS[accountIdx].emoticon = selectedEmoticon;
+          }
+
+          // Supabase에 저장
+          if (sbClient && currentUser.loginId) {
+            try {
+              const { error } = await sbClient.from('users')
+                .update({ emoticon: selectedEmoticon })
+                .eq('login_id', currentUser.loginId);
+              if (error) console.error('이모티콘 저장 실패:', error);
+            } catch (e) {
+              console.error('이모티콘 저장 에러:', e);
+            }
+          }
+
+          // 가족 구성원 목록 다시 렌더링
+          renderFamilyMembers();
+        }
+        hideModal('emoticonModal');
+        showToast('이모티콘이 변경되었습니다');
+      }
+
+      function renderRouletteParticipants() {
+        document.getElementById('rouletteParticipants').innerHTML = DEMO_MEMBERS.map(m => `
+    <label style="display:flex;align-items:center;gap:4px;padding:6px 12px;background:var(--bg);border-radius:8px;cursor:pointer;font-size:13px;">
+      <input type="checkbox" value="${m.nickname}" checked class="roulette-check">
+      ${renderEmoticonImg(m.emoticon, 20)} ${m.nickname}
+    </label>
+  `).join('');
+      }
+
+      function renderRouletteChores() {
+        var sel = document.getElementById('rouletteChore');
+        if (!sel) return;
+        sel.innerHTML = DEMO_CHORES.map(function (c) {
+          return '<option value="' + c.title + '">' + c.icon + ' ' + c.title + '</option>';
+        }).join('');
+      }
+
+      // ========== ROULETTE ==========
+      function spinRoulette() {
+        const checks = document.querySelectorAll('.roulette-check:checked');
+        const participants = Array.from(checks).map(c => c.value);
+        if (participants.length < 2) return showToast('최소 2명 이상 선택하세요');
+
+        const preventConsecutive = document.getElementById('preventConsecutive').checked;
+        const chore = document.getElementById('rouletteChore').value;
+
+        // Filter out last winner if prevent consecutive
+        let pool = [...participants];
+        if (preventConsecutive && lastWinner && pool.length > 2 && pool.includes(lastWinner)) {
+          pool = pool.filter(p => p !== lastWinner);
+        }
+
+        const winnerIdx = Math.floor(Math.random() * pool.length);
+        const winner = pool[winnerIdx];
+
+        // Draw & animate wheel
+        document.getElementById('rouletteArea').style.display = 'flex';
+        document.getElementById('spinBtn').disabled = true;
+
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#6C63FF', '#FF6B6B', '#4CAF50', '#FFB74D', '#29B6F6', '#AB47BC', '#EC407A', '#26A69A'];
+        const memberEmojis = {};
+        DEMO_MEMBERS.forEach(m => memberEmojis[m.nickname] = m.emoticon);
+
+        const sliceAngle = (Math.PI * 2) / participants.length;
+        // Target angle: winner slice at top
+        const allIdx = participants.indexOf(winner);
+        const targetAngle = Math.PI * 2 * 5 + (Math.PI * 2 - allIdx * sliceAngle - sliceAngle / 2) - Math.PI / 2;
+
+        let currentAngle = 0;
+        const duration = 3000;
+        const start = performance.now();
+
+        document.getElementById('rouletteResult').textContent = '';
+
+        function drawWheel(angle) {
+          ctx.clearRect(0, 0, 280, 280);
+          const cx = 140, cy = 140, r = 130;
+
+          participants.forEach((p, i) => {
+            const startA = angle + i * sliceAngle;
+            const endA = startA + sliceAngle;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startA, endA);
+            ctx.closePath();
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Text
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(startA + sliceAngle / 2);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            // 캔버스에서는 닉네임만 표시 (이미지는 캔버스에서 처리 불가)
+            ctx.fillText(p, r * 0.6, 5);
+            ctx.restore();
+          });
+
+          // Center circle
+          ctx.beginPath();
+          ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+          ctx.fillStyle = 'white';
+          ctx.fill();
+          ctx.fillStyle = '#333';
+          ctx.font = '16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🎯', cx, cy + 6);
+        }
+
+        function animate(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          currentAngle = eased * targetAngle;
+
+          drawWheel(currentAngle);
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            // Done
+            lastWinner = winner;
+            document.getElementById('rouletteResult').innerHTML =
+              `🎉 <span style="color:var(--primary)">${renderEmoticonImg(memberEmojis[winner], 24)} ${winner}</span> 당첨!`;
+            document.getElementById('spinBtn').disabled = false;
+
+            rouletteSpinHistory.push({
+              chore, winner, participants,
+              time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+            });
+            renderRouletteHistory();
+
+            // Try save to Supabase
+            if (sbClient && currentFamily?.id) {
+              sbClient.from('roulette_spins').insert({
+                family_id: currentFamily.id,
+                chore_id: null,
+                mode: 'daily',
+                participants: participants,
+                winner_user_id: null,
+                rule_snapshot: { chore, winner, preventConsecutive }
+              }).then(({ error }) => {
+                if (error) appendOutput('룰렛 기록 저장 실패: ' + error.message, 'error');
+                else appendOutput('룰렛 기록 Supabase 저장 완료');
+              });
+            }
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      // ========== EVENTS ==========
+      var allEvents = []; // { title, date(YYYY-MM-DD), time, scope, recurrence, recurrenceEnd }
+
+      const RECURRENCE_LABELS = {
+        none: '', daily: '매일', weekly: '매주', biweekly: '격주', monthly: '매월', yearly: '매년'
+      };
+
+      function addEvent() {
+        const title = document.getElementById('eventTitle').value.trim();
+        const date = document.getElementById('eventDate').value;
+        const time = document.getElementById('eventTime').value;
+        const scope = document.getElementById('eventScope').value;
+        const recurrence = document.getElementById('eventRecurrence').value;
+        const recurrenceEnd = document.getElementById('eventRecurrenceEnd').value;
+
+        if (!title) return showToast('제목을 입력하세요');
+
+        const eventDate = date || new Date().toISOString().slice(0, 10);
+        const ev = { title, date: eventDate, time: time || '종일', scope, recurrence, recurrenceEnd: recurrenceEnd || null };
+        allEvents.push(ev);
+
+        // Also add to legacy DEMO_EVENTS for the current month dot display
+        const day = new Date(eventDate).getDate();
+        if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
+        DEMO_EVENTS[day].push({
+          title,
+          time: time || '종일',
+          scope,
+          recurrence,
+          createdBy: currentUser ? currentUser.nickname : null  // 개인 일정 소유자
+        });
+
+        generateRecurringEvents(ev);
+        renderCalendar();
+        hideModal('eventModal');
+
+        // Reset form
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventRecurrence').value = 'none';
+        document.getElementById('recurrenceEndGroup').style.display = 'none';
+
+        showToast(recurrence !== 'none' ? '반복 일정이 추가되었습니다 (' + RECURRENCE_LABELS[recurrence] + ')' : '일정이 추가되었습니다');
+
+        if (sbClient && currentFamily?.id) {
+          const startAt = new Date(eventDate + 'T' + (time || '00:00'));
+          sbClient.from('events').insert({
+            family_id: currentFamily.id,
+            created_by: currentUser ? currentUser.nickname : null,  // 개인 일정 소유자 저장
+            title, scope,
+            start_at: startAt.toISOString(),
+            end_at: new Date(startAt.getTime() + 3600000).toISOString(),
+            recurrence_rule: recurrence !== 'none' ? recurrenceToRRule(recurrence) : null,
+          }).then(function (res) {
+            if (res.error) appendOutput('일정 저장 실패: ' + res.error.message, 'error');
+            else appendOutput('일정 Supabase 저장 완료');
+          });
+        }
+      }
+
+      function recurrenceToRRule(rec) {
+        var map = { daily: 'FREQ=DAILY', weekly: 'FREQ=WEEKLY', biweekly: 'FREQ=WEEKLY;INTERVAL=2', monthly: 'FREQ=MONTHLY', yearly: 'FREQ=YEARLY' };
+        return map[rec] || null;
+      }
+
+      function generateRecurringEvents(ev) {
+        if (!ev.recurrence || ev.recurrence === 'none') return;
+        var start = new Date(ev.date);
+        var end = ev.recurrenceEnd ? new Date(ev.recurrenceEnd) : new Date(start.getTime() + 90 * 86400000); // 90 days default
+        var intervalMap = { daily: 1, weekly: 7, biweekly: 14 };
+        var current = new Date(start);
+
+        if (ev.recurrence === 'monthly') {
+          var dayOfMonth = current.getDate();
+          current.setMonth(current.getMonth() + 1);
+          while (current <= end) {
+            var d = current.getDate();
+            if (!DEMO_EVENTS[d]) DEMO_EVENTS[d] = [];
+            DEMO_EVENTS[d].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            current.setMonth(current.getMonth() + 1);
+          }
+        } else if (ev.recurrence === 'yearly') {
+          current.setFullYear(current.getFullYear() + 1);
+          while (current <= end) {
+            var d2 = current.getDate();
+            if (!DEMO_EVENTS[d2]) DEMO_EVENTS[d2] = [];
+            DEMO_EVENTS[d2].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            current.setFullYear(current.getFullYear() + 1);
+          }
+        } else {
+          var interval = intervalMap[ev.recurrence] || 7;
+          current.setDate(current.getDate() + interval);
+          while (current <= end) {
+            var d3 = current.getDate();
+            if (!DEMO_EVENTS[d3]) DEMO_EVENTS[d3] = [];
+            DEMO_EVENTS[d3].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            current.setDate(current.getDate() + interval);
+          }
+        }
+      }
+
+      // ========== GOOGLE CALENDAR ==========
+
+      function renderGcalExportList() {
+        var sel = document.getElementById('gcalExportSelect');
+        if (!sel) return;
+        var opts = '<option value="">-- 일정 선택 --</option>';
+        var allEvts = getAllFlatEvents();
+        allEvts.forEach(function (ev, i) {
+          var rec = ev.recurrence && ev.recurrence !== 'none' ? ' [🔁' + (RECURRENCE_LABELS[ev.recurrence] || '') + ']' : '';
+          opts += '<option value="' + i + '">' + ev.title + ' (' + ev.date + ' ' + ev.time + ')' + rec + '</option>';
+        });
+        sel.innerHTML = opts;
+      }
+
+      function getAllFlatEvents() {
+        // Combine allEvents + DEMO_EVENTS into flat array with date info
+        var result = allEvents.slice();
+        var now = new Date();
+        var y = now.getFullYear(), m = now.getMonth();
+        Object.keys(DEMO_EVENTS).forEach(function (day) {
+          DEMO_EVENTS[day].forEach(function (ev) {
+            var dateStr = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            if (!result.some(function (r) { return r.title === ev.title && r.date === dateStr; })) {
+              result.push({ title: ev.title, date: dateStr, time: ev.time || '종일', scope: ev.scope || 'family', recurrence: ev.recurrence || 'none' });
+            }
+          });
+        });
+        return result;
+      }
+
+      function exportToGoogleCalendar() {
+        var sel = document.getElementById('gcalExportSelect');
+        var idx = sel.value;
+        if (idx === '') return showToast('일정을 선택하세요');
+
+        var allEvts = getAllFlatEvents();
+        var ev = allEvts[parseInt(idx)];
+        if (!ev) return;
+
+        // Google Calendar URL scheme
+        var startStr, endStr;
+        if (ev.time === '종일') {
+          startStr = ev.date.replace(/-/g, '');
+          endStr = startStr;
+        } else {
+          startStr = ev.date.replace(/-/g, '') + 'T' + ev.time.replace(/:/g, '') + '00';
+          // end = start + 1 hour
+          var sd = new Date(ev.date + 'T' + ev.time);
+          var ed = new Date(sd.getTime() + 3600000);
+          endStr = ed.getFullYear() + String(ed.getMonth() + 1).padStart(2, '0') + String(ed.getDate()).padStart(2, '0')
+            + 'T' + String(ed.getHours()).padStart(2, '0') + String(ed.getMinutes()).padStart(2, '0') + '00';
+        }
+
+        var params = 'text=' + encodeURIComponent(ev.title)
+          + '&dates=' + startStr + '/' + endStr
+          + '&ctz=Asia/Seoul';
+
+        if (ev.scope === 'family') params += '&details=' + encodeURIComponent('가족 일정 - Family Hub');
+
+        if (ev.recurrence && ev.recurrence !== 'none') {
+          var rrule = recurrenceToRRule(ev.recurrence);
+          params += '&recur=RRULE:' + encodeURIComponent(rrule);
+        }
+
+        window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&' + params, '_blank');
+        showToast('Google Calendar가 새 탭에서 열렸습니다');
+      }
+
+      function exportAllToGoogleCalendar() {
+        var allEvts = getAllFlatEvents();
+        if (allEvts.length === 0) return showToast('내보낼 일정이 없습니다');
+
+        // Generate ICS file
+        var lines = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//Family Hub//Prototype//KO',
+          'CALSCALE:GREGORIAN',
+          'X-WR-CALNAME:Family Hub',
+          'X-WR-TIMEZONE:Asia/Seoul',
+        ];
+
+        allEvts.forEach(function (ev) {
+          lines.push('BEGIN:VEVENT');
+          lines.push('SUMMARY:' + ev.title);
+          lines.push('DESCRIPTION:' + (ev.scope === 'family' ? '가족 일정' : '개인 일정'));
+
+          if (ev.time === '종일') {
+            lines.push('DTSTART;VALUE=DATE:' + ev.date.replace(/-/g, ''));
+            lines.push('DTEND;VALUE=DATE:' + ev.date.replace(/-/g, ''));
+          } else {
+            lines.push('DTSTART;TZID=Asia/Seoul:' + ev.date.replace(/-/g, '') + 'T' + ev.time.replace(/:/g, '') + '00');
+            var sd = new Date(ev.date + 'T' + ev.time);
+            var ed = new Date(sd.getTime() + 3600000);
+            var endStr = ed.getFullYear() + String(ed.getMonth() + 1).padStart(2, '0') + String(ed.getDate()).padStart(2, '0')
+              + 'T' + String(ed.getHours()).padStart(2, '0') + String(ed.getMinutes()).padStart(2, '0') + '00';
+            lines.push('DTEND;TZID=Asia/Seoul:' + endStr);
+          }
+
+          if (ev.recurrence && ev.recurrence !== 'none') {
+            lines.push('RRULE:' + recurrenceToRRule(ev.recurrence));
+          }
+
+          lines.push('UID:' + Math.random().toString(36).slice(2) + '@familyhub');
+          lines.push('END:VEVENT');
+        });
+
+        lines.push('END:VCALENDAR');
+
+        var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'family-hub-events.ics';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(allEvts.length + '건의 일정을 .ics 파일로 다운로드했습니다');
+      }
+
+      async function importFromGoogle() {
+        var calendarId = document.getElementById('gcalCalendarId').value.trim();
+        var apiKey = document.getElementById('gcalApiKey').value.trim();
+        var resultEl = document.getElementById('gcalImportResult');
+
+        if (!calendarId) return showToast('캘린더 ID를 입력하세요');
+        if (!apiKey) return showToast('API Key를 입력하세요');
+
+        resultEl.innerHTML = '⏳ 가져오는 중...';
+
+        try {
+          var now = new Date();
+          var timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+          var timeMax = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
+
+          var resp = await fetch(
+            'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId)
+            + '/events?key=' + apiKey
+            + '&timeMin=' + timeMin
+            + '&timeMax=' + timeMax
+            + '&singleEvents=true&orderBy=startTime&maxResults=50'
+          );
+
+          if (!resp.ok) throw new Error('API 오류 ' + resp.status + ': 캘린더 ID나 API Key를 확인하세요');
+
+          var data = await resp.json();
+          var items = data.items || [];
+          var imported = 0;
+
+          items.forEach(function (item) {
+            var start = item.start.dateTime || item.start.date;
+            var d = new Date(start);
+            var day = d.getDate();
+            var time = item.start.dateTime ? d.toTimeString().slice(0, 5) : '종일';
+            var title = (item.summary || '(제목 없음)') + ' (G)';
+
+            if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
+            var exists = DEMO_EVENTS[day].some(function (e) { return e.title === title; });
+            if (!exists) {
+              DEMO_EVENTS[day].push({ title: title, time: time, scope: 'personal', recurrence: 'none' });
+              imported++;
+            }
+          });
+
+          renderCalendar();
+          resultEl.innerHTML = '✅ ' + imported + '건 가져옴 (총 ' + items.length + '건)';
+          showToast('Google Calendar에서 ' + imported + '건 가져왔습니다');
+        } catch (e) {
+          resultEl.innerHTML = '❌ ' + e.message;
+        }
+      }
+
+      async function importGoogleDemo() {
+        var resultEl = document.getElementById('gcalImportResult');
+        resultEl.innerHTML = '⏳ 데모 데이터 가져오는 중...';
+        await new Promise(function (r) { setTimeout(r, 800); });
+
+        var demoGoogleEvents = [
+          { title: '📱 팀 미팅 (G)', time: '10:00', scope: 'personal', recurrence: 'weekly' },
+          { title: '🏋️ 헬스장 (G)', time: '07:00', scope: 'personal', recurrence: 'daily' },
+          { title: '📞 화상회의 (G)', time: '14:00', scope: 'personal', recurrence: 'none' },
+          { title: '🎂 친구 생일 (G)', time: '종일', scope: 'personal', recurrence: 'yearly' },
+        ];
+        var today = new Date().getDate();
+        demoGoogleEvents.forEach(function (ev, i) {
+          var d = ((today + i + 1) % 28) + 1;
+          if (!DEMO_EVENTS[d]) DEMO_EVENTS[d] = [];
+          DEMO_EVENTS[d].push(ev);
+        });
+        renderCalendar();
+        resultEl.innerHTML = '✅ ' + demoGoogleEvents.length + '건 데모 일정 가져옴';
+        showToast(demoGoogleEvents.length + '건의 Google 일정을 가져왔습니다 (데모)');
+      }
+
+      async function addChore() {
+        const title = document.getElementById('choreTitle').value.trim();
+        const desc = document.getElementById('choreDesc').value || '';
+        if (!title) return showToast('이름을 입력하세요');
+
+        // 로컬 데이터에 추가
+        DEMO_CHORES.push({ title, icon: '📌', desc });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const choreId = crypto.randomUUID();
+            const { error } = await sbClient.from('chores').insert({
+              id: choreId,
+              family_id: currentFamily.id,
+              title: title,
+              description: desc,
+              assigned_to: null,
+              due_date: null,
+              is_done: false
+            });
+            if (error) {
+              console.error('집안일 저장 실패:', error);
+            }
+          } catch (e) {
+            console.error('집안일 저장 에러:', e);
+          }
+        }
+
+        renderChores();
+        renderRouletteChores();
+        hideModal('choreModal');
+        document.getElementById('choreTitle').value = '';
+        document.getElementById('choreDesc').value = '';
+        showToast('집안일이 추가되었습니다');
+      }
+
+      function addFineRule() {
+        const trigger = document.getElementById('fineRuleTrigger').value;
+        const desc = document.getElementById('fineRuleDesc').value.trim();
+        const amount = parseInt(document.getElementById('fineRuleAmount').value) || 1000;
+        if (!desc) return showToast('설명을 입력하세요');
+        DEMO_FINE_RULES.push({ trigger, desc, amount });
+        renderFines();
+        hideModal('fineRuleModal');
+        showToast('벌금 규칙이 추가되었습니다');
+      }
+
+      // ========== MEETINGS ==========
+      function renderMeetings() {
+        const el = document.getElementById('meetingList');
+        el.innerHTML = DEMO_MEETINGS.map(m => `
+    <div class="meeting-card" style="${m.status === 'done' ? 'border-left-color:#aaa;opacity:0.7;' : ''}">
+      <div class="meeting-title">${m.title}</div>
+      <div class="meeting-meta">${m.date} ${m.time} · ${m.status === 'done' ? '완료' : '예정'}</div>
+      <div class="meeting-meta" style="margin-top:4px;">${m.agenda.split('\n')[0]}</div>
+      <div class="meeting-actions">
+        <button class="btn btn-outline btn-sm" onclick="viewMeeting(${m.id})">상세보기</button>
+        ${m.status !== 'done' ? `<button class="btn btn-sm btn-success" onclick="completeMeeting(${m.id})">완료</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+        // Populate assignee dropdown
+        const sel = document.getElementById('actionItemAssignee');
+        if (sel) {
+          sel.innerHTML = DEMO_MEMBERS.map(m => `<option value="${m.nickname}">${m.nickname}</option>`).join('');
+        }
+      }
+
+      function viewMeeting(id) {
+        selectedMeetingId = id;
+        const m = DEMO_MEETINGS.find(x => x.id === id);
+        if (!m) return;
+
+        document.getElementById('meetingDetailCard').style.display = 'block';
+        document.getElementById('meetingDetailTitle').textContent = '📋 ' + m.title;
+        document.getElementById('meetingMinutes').value = m.minutes || '';
+
+        // Comments
+        document.getElementById('meetingComments').innerHTML = m.comments.length === 0
+          ? '<p style="font-size:12px;color:var(--text-sub);padding:8px 0;">댓글이 없습니다</p>'
+          : m.comments.map(c => `
+      <div class="comment-item">
+        <div class="comment-avatar">${renderEmoticonImg(c.emoticon, 28)}</div>
+        <div class="comment-body">
+          <div class="comment-author">${c.user}</div>
+          <div class="comment-text">${c.text}</div>
+          <div class="comment-time">${c.time}</div>
+        </div>
+      </div>
+    `).join('');
+
+        // Action Items
+        renderActionItems(m);
+
+        // Scroll to detail
+        document.getElementById('meetingDetailCard').scrollIntoView({ behavior: 'smooth' });
+      }
+
+      function renderActionItems(m) {
+        document.getElementById('actionItemsList').innerHTML = m.actionItems.map((a, i) => `
+    <div class="action-item ${a.done ? 'done' : ''}">
+      <input type="checkbox" ${a.done ? 'checked' : ''} onchange="toggleActionItem(${m.id}, ${i})">
+      <span style="flex:1;">${a.text}</span>
+      <span style="font-size:11px;color:var(--text-sub);">${a.assignee}</span>
+    </div>
+  `).join('');
+      }
+
+      function addComment() {
+        const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
+        if (!m) return;
+        const text = document.getElementById('commentInput').value.trim();
+        if (!text) return;
+        m.comments.push({
+          user: currentUser?.nickname || '아빠',
+          emoticon: currentUser?.emoticon || './imo/1.png',
+          text,
+          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        });
+        document.getElementById('commentInput').value = '';
+        viewMeeting(m.id);
+        showToast('댓글이 추가되었습니다');
+      }
+
+      function addActionItem() {
+        const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
+        if (!m) return;
+        const text = document.getElementById('actionItemInput').value.trim();
+        if (!text) return;
+        const assignee = document.getElementById('actionItemAssignee').value;
+        m.actionItems.push({ text, assignee, done: false });
+        document.getElementById('actionItemInput').value = '';
+        renderActionItems(m);
+        showToast('액션 아이템이 추가되었습니다');
+      }
+
+      function toggleActionItem(meetingId, idx) {
+        const m = DEMO_MEETINGS.find(x => x.id === meetingId);
+        if (m) {
+          m.actionItems[idx].done = !m.actionItems[idx].done;
+          renderActionItems(m);
+        }
+      }
+
+      function saveMeetingMinutes() {
+        const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
+        if (m) {
+          m.minutes = document.getElementById('meetingMinutes').value;
+          showToast('회의록이 저장되었습니다');
+        }
+      }
+
+      function completeMeeting(id) {
+        const m = DEMO_MEETINGS.find(x => x.id === id);
+        if (m) { m.status = 'done'; renderMeetings(); showToast('회의가 완료되었습니다'); }
+      }
+
+      function addMeeting() {
+        const title = document.getElementById('meetingTitle').value.trim();
+        if (!title) return showToast('제목을 입력하세요');
+        const date = document.getElementById('meetingDate').value || new Date().toISOString().slice(0, 10);
+        const time = document.getElementById('meetingTime').value || '20:00';
+        const agenda = document.getElementById('meetingAgenda').value;
+        DEMO_MEETINGS.unshift({
+          id: Date.now(), title, date, time, agenda, status: 'upcoming',
+          comments: [], minutes: '', actionItems: []
+        });
+        renderMeetings();
+        hideModal('meetingModal');
+        showToast('회의가 생성되었습니다');
+
+        // Also add to calendar
+        const day = new Date(date).getDate();
+        if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
+        DEMO_EVENTS[day].push({ title: '📋 ' + title, time, scope: 'family' });
+        renderCalendar();
+      }
+
+      // ========== VOTES ==========
+      function renderVotes() {
+        const active = DEMO_VOTES.filter(v => v.status === 'active');
+        const closed = DEMO_VOTES.filter(v => v.status === 'closed');
+
+        document.getElementById('activeVotesList').innerHTML = active.length === 0
+          ? '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:12px;">진행 중인 투표가 없습니다</p>'
+          : active.map(v => renderVoteCard(v)).join('');
+
+        document.getElementById('closedVotesList').innerHTML = closed.length === 0
+          ? '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:12px;">완료된 투표가 없습니다</p>'
+          : closed.map(v => renderVoteCard(v)).join('');
+      }
+
+      function renderVoteCard(v) {
+        const totalVotes = v.options.reduce((s, o) => s + o.votes.length, 0);
+        const myName = currentUser?.nickname || '아빠';
+        const myVoted = v.options.some(o => o.votes.includes(myName));
+        const deadline = new Date(v.deadline);
+        const isExpired = deadline < new Date();
+        const showResults = myVoted || v.status === 'closed' || isExpired;
+
+        let html = `<div style="background:var(--bg);border-radius:12px;padding:14px;margin-bottom:10px;">`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">`;
+        html += `<div style="font-weight:700;font-size:14px;">${v.title}</div>`;
+        html += `<span class="badge ${v.status === 'active' && !isExpired ? 'badge-pending' : 'badge-done'}">${v.status === 'active' && !isExpired ? '진행 중' : '마감'}</span>`;
+        html += `</div>`;
+        html += `<div style="font-size:11px;color:var(--text-sub);margin-bottom:10px;">마감: ${deadline.toLocaleString('ko-KR')} · ${v.anonymous === true ? '익명' : '공개'} · ${v.multiple ? '복수선택' : '단일선택'} · 참여 ${totalVotes}명</div>`;
+
+        v.options.forEach((o, i) => {
+          const pct = totalVotes > 0 ? Math.round(o.votes.length / totalVotes * 100) : 0;
+          const isMyVote = o.votes.includes(myName);
+          html += `<div class="vote-option ${isMyVote ? 'voted' : ''}" onclick="castVote(${v.id}, ${i})">`;
+          html += `<span style="font-size:13px;min-width:100px;">${o.text}</span>`;
+          if (showResults) {
+            html += `<div class="vote-bar-bg"><div class="vote-bar-fill" style="width:${pct}%"></div></div>`;
+            html += `<span class="vote-pct">${pct}%</span>`;
+          }
+          html += `</div>`;
+        });
+
+        if (showResults && !v.anonymous) {
+          html += `<div style="margin-top:8px;font-size:11px;color:var(--text-sub);">`;
+          v.options.forEach(o => {
+            if (o.votes.length > 0) html += `${o.text}: ${o.votes.join(', ')}<br>`;
+          });
+          html += `</div>`;
+        }
+
+        html += `</div>`;
+        return html;
+      }
+
+      function castVote(voteId, optIdx) {
+        const v = DEMO_VOTES.find(x => x.id === voteId);
+        if (!v || v.status === 'closed') return;
+        if (new Date(v.deadline) < new Date()) return showToast('투표가 마감되었습니다');
+
+        const myName = currentUser?.nickname || '아빠';
+
+        if (!v.multiple) {
+          // Remove existing vote
+          v.options.forEach(o => {
+            o.votes = o.votes.filter(n => n !== myName);
+          });
+        }
+
+        const opt = v.options[optIdx];
+        if (opt.votes.includes(myName)) {
+          opt.votes = opt.votes.filter(n => n !== myName);
+        } else {
+          opt.votes.push(myName);
+        }
+
+        renderVotes();
+        showToast('투표가 반영되었습니다');
+      }
+
+      function addVoteOptionInput() {
+        const container = document.getElementById('voteOptionsContainer');
+        const count = container.children.length + 1;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+        div.innerHTML = `<input type="text" class="vote-option-input" placeholder="선택지 ${count}" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">`;
+        container.appendChild(div);
+      }
+
+      function createVote() {
+        const title = document.getElementById('voteTitle').value.trim();
+        if (!title) return showToast('제목을 입력하세요');
+
+        const inputs = document.querySelectorAll('.vote-option-input');
+        const options = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+        if (options.length < 2) return showToast('최소 2개 선택지를 입력하세요');
+
+        const deadline = document.getElementById('voteDeadline').value || new Date(Date.now() + 86400000).toISOString().slice(0, 16);
+        const anonymous = document.getElementById('voteAnonymous').value === 'true';
+        const multiple = document.getElementById('voteMultiple').value === 'true';
+
+        DEMO_VOTES.unshift({
+          id: Date.now(), title, anonymous, multiple, deadline, status: 'active',
+          options: options.map(t => ({ text: t, votes: [] }))
+        });
+
+        renderVotes();
+        hideModal('voteModal');
+        showToast('투표가 생성되었습니다');
+      }
+
+      // ========== STATS & WEIGHTED ROULETTE ==========
+      function renderStats() {
+        // Completion chart per member
+        const memberStats = {};
+        DEMO_MEMBERS.forEach(m => memberStats[m.nickname] = { total: 0, done: 0 });
+        // Simulate data
+        Object.values(DEMO_WEEKLY_SCHEDULE).forEach(day => {
+          Object.values(day).forEach(name => {
+            if (memberStats[name]) {
+              memberStats[name].total++;
+              if (Math.random() > 0.22) memberStats[name].done++;
+            }
+          });
+        });
+
+        const totalAll = Object.values(memberStats).reduce((s, m) => s + m.total, 0);
+        const doneAll = Object.values(memberStats).reduce((s, m) => s + m.done, 0);
+        document.getElementById('statCompletionRate').textContent = totalAll > 0 ? Math.round(doneAll / totalAll * 100) + '%' : '0%';
+        document.getElementById('statTotalAssigned').textContent = totalAll;
+
+        document.getElementById('completionChart').innerHTML = Object.entries(memberStats).map(([name, s]) => {
+          const pct = s.total > 0 ? Math.round(s.done / s.total * 100) : 0;
+          return `<div class="bar-col">
+      <div class="bar-value">${pct}%</div>
+      <div class="bar" style="height:${pct}px;background:${pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)'}"></div>
+      <div class="bar-label">${name}</div>
+    </div>`;
+        }).join('');
+
+        // Weekly table
+        const chores = ['설거지', '청소', '요리'];
+        const days = ['월', '화', '수', '목', '금', '토', '일'];
+        let tableHtml = '<thead><tr><th style="padding:6px;border-bottom:2px solid var(--border);font-size:11px;"></th>';
+        days.forEach(d => tableHtml += `<th style="padding:6px;border-bottom:2px solid var(--border);font-size:11px;">${d}</th>`);
+        tableHtml += '</tr></thead><tbody>';
+        chores.forEach(c => {
+          tableHtml += `<tr><td style="padding:6px;font-weight:600;font-size:11px;">${c}</td>`;
+          days.forEach(d => {
+            const name = DEMO_WEEKLY_SCHEDULE[d]?.[c] || '-';
+            const emoji = DEMO_MEMBERS.find(m => m.nickname === name)?.emoticon || '';
+            tableHtml += `<td style="padding:6px;text-align:center;font-size:11px;">${renderEmoticonImg(emoji, 20)}<br>${name}</td>`;
+          });
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody>';
+        document.getElementById('weeklyTable').innerHTML = tableHtml;
+
+        // Fine trend
+        const weeks = ['1주차', '2주차', '3주차', '4주차'];
+        const fineAmounts = [3000, 5000, 2000, 4000];
+        const maxF = Math.max(...fineAmounts);
+        document.getElementById('fineTrendChart').innerHTML = weeks.map((w, i) => `
+    <div class="bar-col">
+      <div class="bar-value">${(fineAmounts[i] / 1000).toFixed(0)}k</div>
+      <div class="bar" style="height:${(fineAmounts[i] / maxF) * 90}px;background:${fineAmounts[i] > 3000 ? 'var(--danger)' : 'var(--primary)'}"></div>
+      <div class="bar-label">${w}</div>
+    </div>
+  `).join('');
+
+        // Weight settings
+        document.getElementById('weightSettings').innerHTML = DEMO_MEMBERS.map(m => `
+    <div class="weight-row">
+      <span class="member-name">${renderEmoticonImg(m.emoticon, 20)} ${m.nickname}</span>
+      <input type="range" min="1" max="10" value="5" class="weight-slider" data-member="${m.nickname}" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="weight-val">5</span>
+    </div>
+  `).join('');
+      }
+
+      function spinWeightedRoulette() {
+        const sliders = document.querySelectorAll('.weight-slider');
+        const pool = [];
+        sliders.forEach(s => {
+          const weight = parseInt(s.value);
+          for (let i = 0; i < weight; i++) pool.push(s.dataset.member);
+        });
+        if (pool.length === 0) return;
+        const winner = pool[Math.floor(Math.random() * pool.length)];
+        const emoji = DEMO_MEMBERS.find(m => m.nickname === winner)?.emoticon || '';
+        document.getElementById('weightedRouletteResult').innerHTML =
+          `🎉 <span style="color:var(--primary)">${renderEmoticonImg(emoji, 24)} ${winner}</span> 당첨!`;
+        showToast('가중치 룰렛 결과: ' + winner);
+      }
+
+      // ========== SUPABASE ==========
+      async function connectSupabase() {
+        const statusEl = document.getElementById('connStatus');
+        const textEl = document.getElementById('connText');
+        const btn = document.querySelector('button[onclick="connectSupabase()"]');
+
+        const url = document.getElementById('supabaseUrl').value.trim();
+        const key = document.getElementById('supabaseKey').value.trim();
+        if (!url || !key) {
+          statusEl.className = 'conn-status conn-fail';
+          textEl.textContent = '미설정';
+          appendOutput('Supabase URL과 Key를 입력하세요', 'error');
+          return;
+        }
+
+        // If config changed, reset client
+        if (sbClient && (sbConfig.url !== url || sbConfig.key !== key)) {
+          appendOutput('설정 변경 감지, 클라이언트 재생성...', 'info');
+          sbClient = null;
+          sbConfig = null;
+        }
+
+        // Return existing client if already connected
+        if (sbClient && sbConfig) {
+          statusEl.className = 'conn-status conn-ok';
+          textEl.textContent = '연결됨';
+          appendOutput('이미 연결되어 있습니다', 'info');
+          return sbClient;
+        }
+
+        // Prevent concurrent connections
+        if (sbConnecting) {
+          appendOutput('연결 시도 중...', 'info');
+          return sbConnecting;
+        }
+
+        if (btn) btn.disabled = true;
+
+        // Supabase CDN 동적 로드
+        if (!window.supabase || !window.supabase.createClient) {
+          appendOutput('Supabase 라이브러리 로딩 중...', 'info');
+          try {
+            await new Promise(function (resolve, reject) {
+              var s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+              s.onload = resolve;
+              s.onerror = reject;
+              document.head.appendChild(s);
+            });
+            appendOutput('Supabase 라이브러리 로드 완료', 'info');
+          } catch (e) {
+            statusEl.className = 'conn-status conn-fail';
+            textEl.textContent = '오프라인';
+            appendOutput('Supabase 라이브러리 로드 실패 (인터넷 연결 확인)', 'error');
+            if (btn) btn.disabled = false;
+            return;
+          }
+        }
+
+        if (!window.supabase || !window.supabase.createClient) {
+          statusEl.className = 'conn-status conn-fail';
+          textEl.textContent = '오프라인';
+          appendOutput('Supabase 라이브러리를 사용할 수 없습니다', 'error');
+          if (btn) btn.disabled = false;
+          return;
+        }
+
+        statusEl.className = 'conn-status conn-loading';
+        textEl.textContent = '연결 중';
+
+        sbConnecting = (async function () {
+          try {
+            appendOutput('Supabase 클라이언트 생성 중...', 'info');
+
+            // Create client with unique storage key to prevent multiple instances
+            const storageKey = 'fh-proto-' + Date.now();
+            sbClient = window.supabase.createClient(url, key, {
+              auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
+                storageKey: storageKey
+              }
+            });
+
+            sbConfig = { url: url, key: key };
+
+            // Test connection with health check
+            const response = await fetch(url + '/rest/v1/', {
+              headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+            });
+
+            statusEl.className = 'conn-status conn-ok';
+            textEl.textContent = '연결됨';
+            appendOutput('✅ Supabase 연결 성공!', 'info');
+
+            return sbClient;
+          } catch (e) {
+            statusEl.className = 'conn-status conn-fail';
+            textEl.textContent = '실패';
+
+            var errMsg = (e && e.message) ? e.message : JSON.stringify(e);
+
+            if (e && e.code === 'PGRST301') {
+              errMsg = 'RLS 정책 오류: 테이블 접근 권한이 없습니다. Supabase 대시보드에서 RLS 정책을 확인하세요.';
+            } else if (e && (e.status === 401 || e.code === '401')) {
+              errMsg = '인증 실패: Anon Key가 올바르지 않거나 RLS 정책이 익명 접근을 차단하고 있습니다.';
+            } else if (e && (e.status === 403 || e.code === '403')) {
+              errMsg = '접근 거부: RLS 정책에서 익명 사용자의 접근을 차단하고 있습니다.';
+            } else if (e && e.message && e.message.includes('Failed to fetch')) {
+              errMsg = '네트워크 오류: Supabase URL을 확인하거나 인터넷 연결을 확인하세요.';
+            }
+
+            appendOutput('❌ Supabase 연결 실패: ' + errMsg, 'error');
+            console.error('Supabase 연결 실패', e);
+
+            sbClient = null;
+            sbConfig = null;
+
+            return null;
+          } finally {
+            sbConnecting = null;
+            if (btn) btn.disabled = false;
+          }
+        })();
+
+        return sbConnecting;
+      }
+
+      // 테이블별 표시할 컬럼 및 한글 라벨 정의
+      const TABLE_DISPLAY_CONFIG = {
+        families: {
+          columns: ['family_name', 'family_code', 'created_at'],
+          labels: { family_name: '가족명', family_code: '코드', created_at: '생성일' }
+        },
+        users: {
+          columns: ['nickname', 'login_id', 'role', 'emoticon'],
+          labels: { nickname: '닉네임', login_id: '아이디', role: '역할', emoticon: '이모티콘' }
+        },
+        emoticons: {
+          columns: ['user_id', 'emoticon', 'sent_at'],
+          labels: { user_id: '보낸이', emoticon: '이모티콘', sent_at: '시간' }
+        },
+        events: {
+          columns: ['title', 'scope', 'start_at'],
+          labels: { title: '제목', scope: '범위', start_at: '시작일' }
+        },
+        chores: {
+          columns: ['title', 'assigned_to', 'due_date', 'is_done'],
+          labels: { title: '집안일', assigned_to: '담당자', due_date: '기한', is_done: '완료' }
+        },
+        fines: {
+          columns: ['rule_name', 'amount', 'user_id', 'created_at'],
+          labels: { rule_name: '규칙', amount: '금액', user_id: '대상', created_at: '생성일' }
+        },
+        roulette_results: {
+          columns: ['chore_id', 'winner_user_id', 'created_at'],
+          labels: { chore_id: '집안일', winner_user_id: '당첨자', created_at: '날짜' }
+        }
+      };
+
+      // 데이터를 표 형식으로 변환
+      function formatAsTable(data, table) {
+        if (!data || data.length === 0) {
+          return '<div style="color:var(--text-secondary);padding:8px;">데이터 없음</div>';
+        }
+
+        const config = TABLE_DISPLAY_CONFIG[table] || {};
+        const columns = config.columns || Object.keys(data[0]).slice(0, 5);
+        const labels = config.labels || {};
+
+        let html = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:8px 0;">';
+
+        // 헤더
+        html += '<thead><tr style="background:rgba(139,92,246,0.3);">';
+        columns.forEach(col => {
+          const label = labels[col] || col;
+          html += `<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-color);">${label}</th>`;
+        });
+        html += '</tr></thead>';
+
+        // 바디
+        html += '<tbody>';
+        data.forEach((row, idx) => {
+          const bgColor = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.05)';
+          html += `<tr style="background:${bgColor};">`;
+          columns.forEach(col => {
+            let val = row[col];
+            // 값 포맷팅
+            if (val === null || val === undefined) val = '-';
+            else if (typeof val === 'boolean') val = val ? '✓' : '✗';
+            else if (col.includes('_at') || col.includes('date')) {
+              val = new Date(val).toLocaleDateString('ko-KR');
+            } else if (typeof val === 'object') val = JSON.stringify(val).slice(0, 20) + '...';
+            else if (typeof val === 'string' && val.length > 15) val = val.slice(0, 15) + '...';
+            html += `<td style="padding:6px 8px;border-bottom:1px solid var(--border-color);color:var(--text-primary);">${val}</td>`;
+          });
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+
+        return html;
+      }
+
+      async function testAPI(table) {
+        if (!sbClient) return appendOutput('Supabase에 먼저 연결하세요', 'error');
+        clearOutput();
+        appendOutput(`📊 ${table.toUpperCase()} 테이블 조회`, 'info');
+        try {
+          const { data, error } = await sbClient.from(table).select('*').limit(10);
+          if (error) throw error;
+          appendOutput(`총 ${data.length}건`, 'success');
+          appendOutputHTML(formatAsTable(data, table));
+        } catch (e) {
+          appendOutput('에러: ' + e.message, 'error');
+        }
+      }
+
+      async function runCustomQuery() {
+        if (!sbClient) return appendOutput('Supabase에 먼저 연결하세요', 'error');
+        const table = document.getElementById('customTable').value.trim();
+        const select = document.getElementById('customSelect').value.trim() || '*';
+        const limit = parseInt(document.getElementById('customLimit').value) || 10;
+
+        if (!table) return appendOutput('테이블명을 입력하세요', 'error');
+
+        clearOutput();
+        appendOutput(`📊 커스텀 쿼리: ${table}`, 'info');
+        try {
+          const { data, error } = await sbClient.from(table).select(select).limit(limit);
+          if (error) throw error;
+          appendOutput(`총 ${data.length}건 (최대 ${limit}건)`, 'success');
+          appendOutputHTML(formatAsTable(data, table));
+        } catch (e) {
+          appendOutput('에러: ' + e.message, 'error');
+        }
+      }
+
+      function clearOutput() {
+        const el = document.getElementById('apiOutput');
+        if (el) el.innerHTML = '';
+      }
+
+      function appendOutput(msg, type) {
+        const el = document.getElementById('apiOutput');
+        if (!el) return;
+        const span = document.createElement('div');
+        span.style.padding = '4px 0';
+        if (type === 'info') span.style.color = '#60a5fa';
+        else if (type === 'error') span.style.color = '#f87171';
+        else if (type === 'success') span.style.color = '#4ade80';
+        span.textContent = msg;
+        el.appendChild(span);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      function appendOutputHTML(html) {
+        const el = document.getElementById('apiOutput');
+        if (!el) return;
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        el.appendChild(div);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      // ========== ADMIN AUTHENTICATION ==========
+      function toggleAdminLogin() {
+        if (isAdminLoggedIn) {
+          adminLogout();
+        } else {
+          showModal('adminLoginModal');
+          // Clear previous inputs and errors
+          document.getElementById('adminUsername').value = '';
+          document.getElementById('adminPassword').value = '';
+          document.getElementById('adminLoginError').style.display = 'none';
+        }
+      }
+
+      function adminLogin(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('adminUsername').value;
+        const password = document.getElementById('adminPassword').value;
+        const errorEl = document.getElementById('adminLoginError');
+
+        // Check credentials
+        if (username === 'admin' && password === 'family4u') {
+          isAdminLoggedIn = true;
+          hideModal('adminLoginModal');
+          updateAdminUI();
+          showToast('✅ 관리자 로그인 성공!');
+        } else {
+          errorEl.textContent = '❌ 아이디 또는 비밀번호가 올바르지 않습니다.';
+          errorEl.style.display = 'block';
+        }
+      }
+
+      function adminLogout() {
+        isAdminLoggedIn = false;
+        updateAdminUI();
+        showToast('🔓 관리자 로그아웃되었습니다.');
+      }
+
+      function updateAdminUI() {
+        const testPanels = document.getElementById('adminTestPanels');
+        const loginBtn = document.getElementById('adminLoginBtn');
+
+        if (!testPanels || !loginBtn) {
+          console.warn('Admin UI elements not found');
+          return;
+        }
+
+        if (isAdminLoggedIn) {
+          testPanels.style.setProperty('display', 'block', 'important');
+          loginBtn.innerHTML = '🔓 로그아웃';
+        } else {
+          testPanels.style.setProperty('display', 'none', 'important');
+          loginBtn.innerHTML = '🔐 관리자 로그인';
+        }
+      }
+
+      // ========== INIT ==========
+      document.addEventListener('DOMContentLoaded', async function () {
+        try {
+          var ed = document.getElementById('eventDate');
+          if (ed) ed.valueAsDate = new Date();
+          var md = document.getElementById('meetingDate');
+          if (md) md.valueAsDate = new Date();
+
+          // Initialize admin UI state
+          updateAdminUI();
+
+          // 자동으로 Supabase 연결
+          await autoConnectSupabase();
+
+          // 초대 링크 확인
+          checkInviteLink();
+        } catch (e) { console.error('Init error', e); }
+        console.log('Family Hub 프로토타입 로드 완료');
+      });
+
+      // 앱 시작 시 자동 Supabase 연결
+      async function autoConnectSupabase() {
+        const statusEl = document.getElementById('connStatus');
+        const textEl = document.getElementById('connText');
+
+        // 하드코딩된 Supabase 설정
+        const url = 'https://qvforisbxbapojpafbma.supabase.co';
+        const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2Zm9yaXNieGJhcG9qcGFmYm1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMDM0NjgsImV4cCI6MjA4NTg3OTQ2OH0.LSfAT1NqD2Y5p1Wp_vG6I_KZ9mY2jrTCjrfyajvpIrk';
+
+        try {
+          // Supabase CDN 동적 로드
+          if (!window.supabase || !window.supabase.createClient) {
+            console.log('Supabase 라이브러리 로딩 중...');
+            await new Promise(function (resolve, reject) {
+              var s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+              s.onload = resolve;
+              s.onerror = reject;
+              document.head.appendChild(s);
+            });
+          }
+
+          // 클라이언트 생성
+          sbClient = window.supabase.createClient(url, key);
+          sbConfig = { url, key };
+
+          // 연결 테스트 - RPC ping 또는 간단한 쿼리
+          try {
+            // 먼저 간단한 health check 시도
+            const response = await fetch(url + '/rest/v1/', {
+              headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+            });
+            if (!response.ok && response.status !== 404) throw new Error('API 연결 실패');
+          } catch (testErr) {
+            console.warn('Health check 실패, 계속 진행:', testErr.message);
+          }
+
+          // 연결 성공
+          if (statusEl) statusEl.className = 'conn-status conn-ok';
+          if (textEl) textEl.textContent = '연결됨';
+          console.log('✅ Supabase 자동 연결 성공');
+        } catch (e) {
+          console.error('❌ Supabase 자동 연결 실패:', e.message);
+          if (statusEl) statusEl.className = 'conn-status conn-fail';
+          if (textEl) textEl.textContent = '연결 실패';
+        }
+      }
+
+      // ========== 전역 함수 등록 (onclick에서 호출) ==========
+      window.showAuthTab = showAuthTab;
+      window.loginUser = loginUser;
+      window.checkFamilyName = checkFamilyName;
+      window.resetFamilyNameCheck = resetFamilyNameCheck;
+      window.checkUserId = checkUserId;
+      window.resetUserIdCheck = resetUserIdCheck;
+      window.createFamily = createFamily;
+      window.joinFamily = joinFamily;
+      window.quickLogin = quickLogin;
+      window.logout = logout;
+      window.showPage = showPage;
+      window.showModal = showModal;
+      window.hideModal = hideModal;
+      window.changeMonth = changeMonth;
+      window.selectDate = selectDate;
+      window.addEvent = addEvent;
+      window.addChore = addChore;
+      window.addFamilyMember = addFamilyMember;
+      window.showMemberEmoticonPicker = showMemberEmoticonPicker;
+      window.selectMemberEmoticon = selectMemberEmoticon;
+      window.showInviteLink = showInviteLink;
+      window.copyInviteLink = copyInviteLink;
+      window.addFineRule = addFineRule;
+      window.spinRoulette = spinRoulette;
+      window.selectEmoticon = selectEmoticon;
+      window.pickEmoticon = pickEmoticon;
+      window.connectSupabase = connectSupabase;
+      window.testAPI = testAPI;
+      window.runCustomQuery = runCustomQuery;
+      window.addVoteOptionInput = addVoteOptionInput;
+      window.createVote = createVote;
+      window.castVote = castVote;
+      window.addMeeting = addMeeting;
+      window.viewMeeting = viewMeeting;
+      window.completeMeeting = completeMeeting;
+      window.addComment = addComment;
+      window.addActionItem = addActionItem;
+      window.toggleActionItem = toggleActionItem;
+      window.saveMeetingMinutes = saveMeetingMinutes;
+      window.spinWeightedRoulette = spinWeightedRoulette;
+      window.exportToGoogleCalendar = exportToGoogleCalendar;
+      window.exportAllToGoogleCalendar = exportAllToGoogleCalendar;
+      window.importFromGoogle = importFromGoogle;
+      window.importGoogleDemo = importGoogleDemo;
+      window.toggleAdminLogin = toggleAdminLogin;
+      window.adminLogin = adminLogin;
+      window.adminLogout = adminLogout;
+
+      // ========== RECURRENCE TOGGLE ==========
+      document.addEventListener('DOMContentLoaded', function () {
+        var recSel = document.getElementById('eventRecurrence');
+        if (recSel) {
+          recSel.addEventListener('change', function () {
+            document.getElementById('recurrenceEndGroup').style.display = this.value !== 'none' ? 'block' : 'none';
+          });
+        }
+
+        // Check for Google OAuth redirect token
+        var hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+          var params = new URLSearchParams(hash.substring(1));
+          gcalToken = params.get('access_token');
+          window.location.hash = '';
+          showGcalConnected();
+        }
+      });
+
+    })(); // IIFE 종료
+  </script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registered:', registration.scope);
+          })
+          .catch(error => {
+            console.log('ServiceWorker registration failed:', error);
+          });
+      });
+    }
+
+    // PWA Install Prompt Handler
+    let deferredPrompt;
+    const installBanner = document.getElementById('installBanner');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67+ from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      // Show install banner
+      if (!localStorage.getItem('pwaInstallDismissed')) {
+        installBanner.style.display = 'block';
+      }
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        // Hide banner
+        installBanner.style.display = 'none';
+        // Show browser install prompt
+        deferredPrompt.prompt();
+        // Wait for user response
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted PWA install');
+            showToast('🎉 앱이 설치되었습니다!');
+          } else {
+            console.log('User dismissed PWA install');
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        // For iOS or browsers without beforeinstallprompt
+        showIOSInstallGuide();
+      }
+    }
+
+    function dismissInstall() {
+      installBanner.style.display = 'none';
+      localStorage.setItem('pwaInstallDismissed', 'true');
+    }
+
+    function showIOSInstallGuide() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      showModal('installGuideModal');
+      // 기기에 따라 자동 선택
+      if (isIOS) {
+        showInstallGuide('ios');
+      } else {
+        showInstallGuide('android');
+      }
+    }
+
+    function showInstallGuide(device) {
+      const iosGuide = document.getElementById('iosGuide');
+      const androidGuide = document.getElementById('androidGuide');
+      const iosBtn = document.getElementById('iosTabBtn');
+      const androidBtn = document.getElementById('androidTabBtn');
+
+      if (device === 'ios') {
+        iosGuide.style.display = 'block';
+        androidGuide.style.display = 'none';
+        iosBtn.style.background = 'var(--accent-blue)';
+        iosBtn.style.color = 'white';
+        androidBtn.style.background = 'var(--bg-tertiary)';
+        androidBtn.style.color = 'var(--text-main)';
+      } else {
+        iosGuide.style.display = 'none';
+        androidGuide.style.display = 'block';
+        androidBtn.style.background = 'var(--accent-green)';
+        androidBtn.style.color = 'white';
+        iosBtn.style.background = 'var(--bg-tertiary)';
+        iosBtn.style.color = 'var(--text-main)';
+      }
+    }
+
+    // Detect if app is installed
+    window.addEventListener('appinstalled', () => {
+      console.log('PWA was installed');
+      installBanner.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // Check if running as standalone (already installed)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('Running as installed PWA');
+    }
+  </script>
+</body>
+
+</html>
