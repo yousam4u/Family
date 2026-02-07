@@ -150,10 +150,11 @@
     /* === Pages Container === */
     .pages-container {
       flex: 1;
+      display: flex;
+      flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 80px;
     }
 
     /* === Tab Pages === */
@@ -165,22 +166,29 @@
 
     .page.active {
       display: block;
+      flex: 1;
+    }
+
+    /* === Bottom Nav Wrapper === */
+    .bottom-nav-wrapper {
+      position: sticky;
+      bottom: 0;
+      padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      margin-top: auto;
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+      z-index: 1000;
     }
 
     /* === Bottom Nav === */
     .bottom-nav {
-      position: fixed;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100% - 24px);
+      width: 100%;
       max-width: 406px;
+      margin: 0 auto;
       background: #FFFFFF;
       display: flex;
       justify-content: space-around;
       padding: 10px 8px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      z-index: 1000;
       border: 1px solid var(--border);
       border-radius: 24px;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
@@ -1265,6 +1273,10 @@
           <label>비밀번호</label>
           <input type="password" id="loginPwInput" placeholder="비밀번호 입력" value="">
         </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="saveLoginCheckbox" style="width:18px;height:18px;cursor:pointer;">
+          <label for="saveLoginCheckbox" style="cursor:pointer;margin:0;font-size:14px;">로그인 정보 저장</label>
+        </div>
         <button class="btn btn-primary btn-block" onclick="loginUser()">로그인</button>
       </div>
 
@@ -1754,43 +1766,45 @@
         </div>
       </div>
 
-    </div><!-- End Pages Container -->
+      <!-- Bottom Navigation -->
+      <div class="bottom-nav-wrapper">
+        <div class="bottom-nav">
+          <button class="nav-item active" onclick="showPage('home')" data-page="home">
+            <span class="icon">🏠</span>
+            <span>홈</span>
+          </button>
+          <button class="nav-item" onclick="showPage('calendar')" data-page="calendar">
+            <span class="icon">📅</span>
+            <span>일정</span>
+          </button>
+          <button class="nav-item" onclick="showPage('chores')" data-page="chores">
+            <span class="icon">🧹</span>
+            <span>집안일</span>
+          </button>
+          <button class="nav-item" onclick="showPage('meetings')" data-page="meetings">
+            <span class="icon">📋</span>
+            <span>회의</span>
+          </button>
+          <button class="nav-item" onclick="showPage('votes')" data-page="votes">
+            <span class="icon">🗳️</span>
+            <span>투표</span>
+          </button>
+          <button class="nav-item" onclick="showPage('fines')" data-page="fines">
+            <span class="icon">💰</span>
+            <span>벌금</span>
+          </button>
+          <button class="nav-item" onclick="showPage('stats')" data-page="stats">
+            <span class="icon">📊</span>
+            <span>통계</span>
+          </button>
+          <button class="nav-item" onclick="showPage('settings')" data-page="settings">
+            <span class="icon">⚙</span>
+            <span>설정</span>
+          </button>
+        </div>
+      </div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-      <button class="nav-item active" onclick="showPage('home')" data-page="home">
-        <span class="icon">🏠</span>
-        <span>홈</span>
-      </button>
-      <button class="nav-item" onclick="showPage('calendar')" data-page="calendar">
-        <span class="icon">📅</span>
-        <span>일정</span>
-      </button>
-      <button class="nav-item" onclick="showPage('chores')" data-page="chores">
-        <span class="icon">🧹</span>
-        <span>집안일</span>
-      </button>
-      <button class="nav-item" onclick="showPage('meetings')" data-page="meetings">
-        <span class="icon">📋</span>
-        <span>회의</span>
-      </button>
-      <button class="nav-item" onclick="showPage('votes')" data-page="votes">
-        <span class="icon">🗳️</span>
-        <span>투표</span>
-      </button>
-      <button class="nav-item" onclick="showPage('fines')" data-page="fines">
-        <span class="icon">💰</span>
-        <span>벌금</span>
-      </button>
-      <button class="nav-item" onclick="showPage('stats')" data-page="stats">
-        <span class="icon">📊</span>
-        <span>통계</span>
-      </button>
-      <button class="nav-item" onclick="showPage('settings')" data-page="settings">
-        <span class="icon">⚙</span>
-        <span>설정</span>
-      </button>
-    </div>
+    </div><!-- End Pages Container -->
   </div>
 
   <!-- ========== MODALS ========== -->
@@ -2312,6 +2326,64 @@
             console.log('배정 로드 완료');
           }
 
+          // 6. 벌금 규칙 로드
+          const { data: fineRules, error: fineRulesErr } = await sbClient
+            .from('fine_rules')
+            .select('*')
+            .eq('family_id', familyId);
+
+          if (!fineRulesErr && fineRules) {
+            DEMO_FINE_RULES = fineRules.map(r => ({
+              id: r.id,
+              trigger: r.trigger || 'custom',
+              desc: r.description || '',
+              amount: r.amount || 1000
+            }));
+            console.log('벌금 규칙 로드:', DEMO_FINE_RULES.length);
+          }
+
+          // 7. 회의 로드
+          const { data: meetings, error: meetingsErr } = await sbClient
+            .from('meetings')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: false });
+
+          if (!meetingsErr && meetings) {
+            DEMO_MEETINGS = meetings.map(m => ({
+              id: m.id,
+              title: m.title,
+              date: m.meeting_date || '',
+              time: m.meeting_time || '20:00',
+              agenda: m.agenda || '',
+              status: m.status || 'upcoming',
+              comments: [],
+              minutes: m.minutes || '',
+              actionItems: m.action_items ? JSON.parse(m.action_items) : []
+            }));
+            console.log('회의 로드:', DEMO_MEETINGS.length);
+          }
+
+          // 8. 투표 로드
+          const { data: votes, error: votesErr } = await sbClient
+            .from('votes')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: false });
+
+          if (!votesErr && votes) {
+            DEMO_VOTES = votes.map(v => ({
+              id: v.id,
+              title: v.title,
+              anonymous: v.is_anonymous || false,
+              multiple: v.is_multiple || false,
+              deadline: v.deadline || '',
+              status: v.status || 'active',
+              options: v.options ? JSON.parse(v.options) : []
+            }));
+            console.log('투표 로드:', DEMO_VOTES.length);
+          }
+
           showToast('가족 데이터를 불러왔습니다');
         } catch (e) {
           console.error('가족 데이터 로드 실패:', e);
@@ -2486,6 +2558,32 @@
       ];
 
       // ========== AUTH ==========
+      // 저장된 로그인 정보 불러오기
+      function loadSavedLogin() {
+        const savedLogin = localStorage.getItem('familyHubLogin');
+        if (savedLogin) {
+          try {
+            const { id, pw } = JSON.parse(savedLogin);
+            document.getElementById('loginIdInput').value = id || '';
+            document.getElementById('loginPwInput').value = pw || '';
+            document.getElementById('saveLoginCheckbox').checked = true;
+          } catch (e) {
+            console.error('저장된 로그인 정보 파싱 오류:', e);
+            localStorage.removeItem('familyHubLogin');
+          }
+        }
+      }
+
+      // 로그인 정보 저장
+      function saveLoginCredentials(id, pw) {
+        const saveCheckbox = document.getElementById('saveLoginCheckbox');
+        if (saveCheckbox && saveCheckbox.checked) {
+          localStorage.setItem('familyHubLogin', JSON.stringify({ id, pw }));
+        } else {
+          localStorage.removeItem('familyHubLogin');
+        }
+      }
+
       async function loginUser() {
         const id = document.getElementById('loginIdInput').value.trim();
         const pw = document.getElementById('loginPwInput').value.trim();
@@ -2495,6 +2593,7 @@
         const account = DEMO_ACCOUNTS.find(a => a.id === id && a.pw === pw);
 
         if (account) {
+          saveLoginCredentials(id, pw);
           currentFamily = { name: account.family, code: generateCode() };
           currentUser = { nickname: account.nickname, role: account.role, emoticon: account.emoticon, loginId: account.id };
           enterApp();
@@ -2529,6 +2628,7 @@
                 if (familyError) {
                   appendOutput('가족 정보 조회 실패: ' + familyError.message, 'error');
                 } else if (familyData) {
+                  saveLoginCredentials(id, pw);
                   currentFamily = { name: familyData.family_name, code: familyData.family_code, id: familyData.id };
                   currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || './imo/1.png', loginId: id };
                   enterApp();
@@ -2993,6 +3093,16 @@
         document.getElementById('authScreen').style.display = 'flex';
         currentUser = null;
         currentFamily = null;
+
+        // 저장된 로그인 정보가 없으면 입력값 초기화
+        const savedLogin = localStorage.getItem('familyHubLogin');
+        if (!savedLogin) {
+          document.getElementById('loginIdInput').value = '';
+          document.getElementById('loginPwInput').value = '';
+          document.getElementById('saveLoginCheckbox').checked = false;
+        }
+
+        showAuthTab('login');
         showToast('로그아웃되었습니다');
       }
 
@@ -3120,21 +3230,45 @@
         `;
       }
 
-      window.toggleTodayEvent = function (id) {
+      window.toggleTodayEvent = async function (id) {
         const item = TODAY_EVENTS.find(e => e.id === id);
         if (item) {
           item.done = !item.done;
           renderTodayEvents();
           showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id && item.dbId) {
+            try {
+              const { error } = await sbClient.from('events')
+                .update({ is_done: item.done })
+                .eq('id', item.dbId);
+              if (error) console.error('일정 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('일정 상태 업데이트 에러:', e);
+            }
+          }
         }
       };
 
-      window.toggleTodayChore = function (id) {
+      window.toggleTodayChore = async function (id) {
         const item = TODAY_CHORES.find(c => c.id === id);
         if (item) {
           item.done = !item.done;
           renderTodayChores();
           showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id && item.dbId) {
+            try {
+              const { error } = await sbClient.from('chores')
+                .update({ is_done: item.done })
+                .eq('id', item.dbId);
+              if (error) console.error('집안일 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('집안일 상태 업데이트 에러:', e);
+            }
+          }
         }
       };
 
@@ -4000,12 +4134,38 @@
         showToast('집안일이 추가되었습니다');
       }
 
-      function addFineRule() {
+      async function addFineRule() {
         const trigger = document.getElementById('fineRuleTrigger').value;
         const desc = document.getElementById('fineRuleDesc').value.trim();
         const amount = parseInt(document.getElementById('fineRuleAmount').value) || 1000;
         if (!desc) return showToast('설명을 입력하세요');
-        DEMO_FINE_RULES.push({ trigger, desc, amount });
+
+        // 로컬 데이터에 추가
+        const ruleId = crypto.randomUUID();
+        DEMO_FINE_RULES.push({ id: ruleId, trigger, desc, amount });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('fine_rules').insert({
+              id: ruleId,
+              family_id: currentFamily.id,
+              trigger: trigger,
+              description: desc,
+              amount: amount,
+              is_active: true
+            });
+            if (error) {
+              console.error('벌금 규칙 저장 실패:', error);
+              appendOutput('벌금 규칙 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('벌금 규칙 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('벌금 규칙 저장 에러:', e);
+          }
+        }
+
         renderFines();
         hideModal('fineRuleModal');
         showToast('벌금 규칙이 추가되었습니다');
@@ -4073,7 +4233,7 @@
   `).join('');
       }
 
-      function addComment() {
+      async function addComment() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (!m) return;
         const text = document.getElementById('commentInput').value.trim();
@@ -4087,9 +4247,11 @@
         document.getElementById('commentInput').value = '';
         viewMeeting(m.id);
         showToast('댓글이 추가되었습니다');
+
+        // Supabase 업데이트 (comments는 로컬 전용으로 처리 - DB에 comments 컬럼이 없을 수 있음)
       }
 
-      function addActionItem() {
+      async function addActionItem() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (!m) return;
         const text = document.getElementById('actionItemInput').value.trim();
@@ -4099,39 +4261,119 @@
         document.getElementById('actionItemInput').value = '';
         renderActionItems(m);
         showToast('액션 아이템이 추가되었습니다');
+
+        // Supabase 업데이트
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('meetings')
+              .update({ action_items: JSON.stringify(m.actionItems) })
+              .eq('id', selectedMeetingId);
+            if (error) console.error('액션 아이템 저장 실패:', error);
+          } catch (e) {
+            console.error('액션 아이템 저장 에러:', e);
+          }
+        }
       }
 
-      function toggleActionItem(meetingId, idx) {
+      async function toggleActionItem(meetingId, idx) {
         const m = DEMO_MEETINGS.find(x => x.id === meetingId);
         if (m) {
           m.actionItems[idx].done = !m.actionItems[idx].done;
           renderActionItems(m);
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ action_items: JSON.stringify(m.actionItems) })
+                .eq('id', meetingId);
+              if (error) console.error('액션 아이템 업데이트 실패:', error);
+            } catch (e) {
+              console.error('액션 아이템 업데이트 에러:', e);
+            }
+          }
         }
       }
 
-      function saveMeetingMinutes() {
+      async function saveMeetingMinutes() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (m) {
           m.minutes = document.getElementById('meetingMinutes').value;
           showToast('회의록이 저장되었습니다');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ minutes: m.minutes })
+                .eq('id', selectedMeetingId);
+              if (error) console.error('회의록 저장 실패:', error);
+            } catch (e) {
+              console.error('회의록 저장 에러:', e);
+            }
+          }
         }
       }
 
-      function completeMeeting(id) {
+      async function completeMeeting(id) {
         const m = DEMO_MEETINGS.find(x => x.id === id);
-        if (m) { m.status = 'done'; renderMeetings(); showToast('회의가 완료되었습니다'); }
+        if (m) {
+          m.status = 'done';
+          renderMeetings();
+          showToast('회의가 완료되었습니다');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ status: 'done' })
+                .eq('id', id);
+              if (error) console.error('회의 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('회의 상태 업데이트 에러:', e);
+            }
+          }
+        }
       }
 
-      function addMeeting() {
+      async function addMeeting() {
         const title = document.getElementById('meetingTitle').value.trim();
         if (!title) return showToast('제목을 입력하세요');
         const date = document.getElementById('meetingDate').value || new Date().toISOString().slice(0, 10);
         const time = document.getElementById('meetingTime').value || '20:00';
         const agenda = document.getElementById('meetingAgenda').value;
+
+        const meetingId = crypto.randomUUID();
         DEMO_MEETINGS.unshift({
-          id: Date.now(), title, date, time, agenda, status: 'upcoming',
+          id: meetingId, title, date, time, agenda, status: 'upcoming',
           comments: [], minutes: '', actionItems: []
         });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('meetings').insert({
+              id: meetingId,
+              family_id: currentFamily.id,
+              title: title,
+              meeting_date: date,
+              meeting_time: time,
+              agenda: agenda,
+              status: 'upcoming',
+              minutes: '',
+              created_by: currentUser?.nickname || null
+            });
+            if (error) {
+              console.error('회의 저장 실패:', error);
+              appendOutput('회의 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('회의 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('회의 저장 에러:', e);
+          }
+        }
+
         renderMeetings();
         hideModal('meetingModal');
         showToast('회의가 생성되었습니다');
@@ -4196,7 +4438,7 @@
         return html;
       }
 
-      function castVote(voteId, optIdx) {
+      async function castVote(voteId, optIdx) {
         const v = DEMO_VOTES.find(x => x.id === voteId);
         if (!v || v.status === 'closed') return;
         if (new Date(v.deadline) < new Date()) return showToast('투표가 마감되었습니다');
@@ -4219,6 +4461,18 @@
 
         renderVotes();
         showToast('투표가 반영되었습니다');
+
+        // Supabase 업데이트
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('votes')
+              .update({ options: JSON.stringify(v.options) })
+              .eq('id', voteId);
+            if (error) console.error('투표 업데이트 실패:', error);
+          } catch (e) {
+            console.error('투표 업데이트 에러:', e);
+          }
+        }
       }
 
       function addVoteOptionInput() {
@@ -4230,7 +4484,7 @@
         container.appendChild(div);
       }
 
-      function createVote() {
+      async function createVote() {
         const title = document.getElementById('voteTitle').value.trim();
         if (!title) return showToast('제목을 입력하세요');
 
@@ -4242,10 +4496,38 @@
         const anonymous = document.getElementById('voteAnonymous').value === 'true';
         const multiple = document.getElementById('voteMultiple').value === 'true';
 
+        const voteId = crypto.randomUUID();
+        const voteOptions = options.map(t => ({ text: t, votes: [] }));
+
         DEMO_VOTES.unshift({
-          id: Date.now(), title, anonymous, multiple, deadline, status: 'active',
-          options: options.map(t => ({ text: t, votes: [] }))
+          id: voteId, title, anonymous, multiple, deadline, status: 'active',
+          options: voteOptions
         });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('votes').insert({
+              id: voteId,
+              family_id: currentFamily.id,
+              title: title,
+              is_anonymous: anonymous,
+              is_multiple: multiple,
+              deadline: new Date(deadline).toISOString(),
+              status: 'active',
+              options: JSON.stringify(voteOptions),
+              created_by: currentUser?.nickname || null
+            });
+            if (error) {
+              console.error('투표 저장 실패:', error);
+              appendOutput('투표 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('투표 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('투표 저장 에러:', e);
+          }
+        }
 
         renderVotes();
         hideModal('voteModal');
@@ -4670,6 +4952,9 @@
 
           // 자동으로 Supabase 연결
           await autoConnectSupabase();
+
+          // 저장된 로그인 정보 불러오기
+          loadSavedLogin();
 
           // 초대 링크 확인
           checkInviteLink();
