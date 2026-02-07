@@ -493,6 +493,7 @@
       align-items: center;
       justify-content: center;
       font-size: 22px;
+      overflow: hidden;
     }
 
     .member-info {
@@ -547,6 +548,7 @@
       font-size: 24px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border: 2px solid white;
+      overflow: hidden;
     }
 
     .family-member-card .member-name {
@@ -2047,7 +2049,7 @@
       <div class="form-group">
         <label>이모티콘</label>
         <div style="display:flex;align-items:center;gap:12px;">
-          <div id="newMemberEmoticon" style="width:48px;height:48px;background:var(--bg-tertiary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;" onclick="showMemberEmoticonPicker()">😀</div>
+          <div id="newMemberEmoticon" style="width:48px;height:48px;background:var(--bg-tertiary);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;" onclick="showMemberEmoticonPicker()"><img src="imo/1.png" alt="이모티콘" style="width:36px;height:36px;object-fit:contain;"></div>
           <span style="font-size:12px;color:var(--text-sub);">클릭하여 변경</span>
         </div>
         <div id="memberEmoticonPicker" style="display:none;margin-top:8px;background:var(--bg-tertiary);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;">
@@ -2195,7 +2197,7 @@
       let currentUser = null;
       let currentFamily = null;
       let calendarDate = new Date();
-      let selectedEmoticon = '😀';
+      let selectedEmoticon = 'imo/1.png';
       let isAdminLoggedIn = false;
 
       // 'test' = 전체 데이터 표시, 'prod' = 가족 생성 시 예시 데이터만 표시
@@ -2223,7 +2225,7 @@
             DEMO_MEMBERS = members.map(m => ({
               nickname: m.nickname,
               role: m.role || 'member',
-              emoticon: m.emoticon || '😀'
+              emoticon: m.emoticon || 'imo/1.png'
             }));
             console.log('구성원 로드:', DEMO_MEMBERS.length);
           }
@@ -2325,11 +2327,11 @@
         TODAY_CHORES = [];
       }
 
+      // 이모티콘 이미지 목록 (imo 폴더)
       const EMOTICONS = [
-        '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊',
-        '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '🤔', '🤗', '🤫',
-        '😎', '🥳', '😤', '😠', '😈', '👻', '💀', '🤖', '👽', '🎃',
-        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁',
+        'imo/1.png', 'imo/2.png', 'imo/3.png', 'imo/4.png', 'imo/5.png',
+        'imo/6.png', 'imo/7.png', 'imo/8.png', 'imo/9.png', 'imo/10.png',
+        'imo/gp.png', 'imo/gm.png'
       ];
 
       var DEMO_MEMBERS = [];
@@ -2373,7 +2375,7 @@
 
       function resetDemoDataForProduction() {
         const adminName = (currentUser && currentUser.nickname) ? currentUser.nickname : '가족장';
-        const adminEmoticon = (currentUser && currentUser.emoticon) ? currentUser.emoticon : '😎';
+        const adminEmoticon = (currentUser && currentUser.emoticon) ? currentUser.emoticon : 'imo/1.png';
 
         // 가족 생성 시 모든 데이터를 빈 상태로 초기화
         DEMO_MEMBERS = [
@@ -2524,7 +2526,7 @@
                   appendOutput('가족 정보 조회 실패: ' + familyError.message, 'error');
                 } else if (familyData) {
                   currentFamily = { name: familyData.family_name, code: familyData.family_code, id: familyData.id };
-                  currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || '😀', loginId: id };
+                  currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || 'imo/1.png', loginId: id };
                   enterApp();
                   showToast(userData.nickname + '님 환영합니다!');
                   return;
@@ -2950,7 +2952,7 @@
         document.getElementById('headerFamilyName').textContent = currentFamily.name;
         document.getElementById('headerCode').textContent = '코드: ' + currentFamily.code;
         document.getElementById('settingsNickname').value = currentUser.nickname;
-        document.getElementById('profileEmoticon').textContent = currentUser.emoticon;
+        document.getElementById('profileEmoticon').innerHTML = renderEmoticonImg(currentUser.emoticon, 48);
 
         const today = new Date();
         document.getElementById('todayDate').textContent =
@@ -3132,6 +3134,15 @@
         }
       };
 
+      // 이모티콘 렌더링 헬퍼 함수
+      function renderEmoticonImg(emoticon, size = 48) {
+        if (emoticon && emoticon.startsWith('imo/')) {
+          return `<img src="${emoticon}" alt="이모티콘" style="width:${size}px;height:${size}px;object-fit:contain;">`;
+        }
+        // 기존 이모지 호환
+        return `<img src="imo/1.png" alt="이모티콘" style="width:${size}px;height:${size}px;object-fit:contain;">`;
+      }
+
       function renderFamilyMembers() {
         const el = document.getElementById('familyMembers');
         if (DEMO_MEMBERS.length === 0) {
@@ -3140,7 +3151,7 @@
         }
         el.innerHTML = `<div class="family-members-grid">` + DEMO_MEMBERS.map(m => `
     <div class="family-member-card">
-      <div class="avatar-large">${m.emoticon}</div>
+      <div class="avatar-large">${renderEmoticonImg(m.emoticon, 64)}</div>
       <div class="member-name">${m.nickname}</div>
       <div class="member-role">${m.role === 'admin' ? '관리자' : '구성원'}</div>
     </div>
@@ -3148,14 +3159,16 @@
       }
 
       // 구성원 추가용 이모티콘 선택
-      let newMemberEmoticon = '😀';
+      let newMemberEmoticon = 'imo/1.png';
 
       function showMemberEmoticonPicker() {
         const picker = document.getElementById('memberEmoticonPicker');
         const grid = document.getElementById('memberEmoticonGrid');
         if (picker.style.display === 'none') {
           grid.innerHTML = EMOTICONS.map(e =>
-            `<div style="font-size:20px;cursor:pointer;text-align:center;padding:4px;border-radius:4px;${e === newMemberEmoticon ? 'background:var(--accent-purple);' : ''}" onclick="selectMemberEmoticon('${e}')">${e}</div>`
+            `<div style="cursor:pointer;text-align:center;padding:4px;border-radius:4px;${e === newMemberEmoticon ? 'background:var(--accent-purple);' : ''}" onclick="selectMemberEmoticon('${e}')">
+              <img src="${e}" alt="이모티콘" style="width:32px;height:32px;object-fit:contain;">
+            </div>`
           ).join('');
           picker.style.display = 'block';
         } else {
@@ -3165,7 +3178,7 @@
 
       function selectMemberEmoticon(emoticon) {
         newMemberEmoticon = emoticon;
-        document.getElementById('newMemberEmoticon').textContent = emoticon;
+        document.getElementById('newMemberEmoticon').innerHTML = renderEmoticonImg(emoticon, 24);
         document.getElementById('memberEmoticonPicker').style.display = 'none';
       }
 
@@ -3315,8 +3328,8 @@
         document.getElementById('newMemberLoginId').value = '';
         document.getElementById('newMemberPassword').value = '';
         document.getElementById('newMemberRole').value = 'member';
-        newMemberEmoticon = '😀';
-        document.getElementById('newMemberEmoticon').textContent = '😀';
+        newMemberEmoticon = 'imo/1.png';
+        document.getElementById('newMemberEmoticon').innerHTML = '<img src="imo/1.png" alt="이모티콘" style="width:36px;height:36px;object-fit:contain;">';
 
         showToast(`${nickname}님이 추가되었습니다!`);
       }
@@ -3464,7 +3477,9 @@
 
       function renderEmoticonGrid() {
         document.getElementById('emoticonGrid').innerHTML = EMOTICONS.map(e => `
-    <div class="emoticon-item${e === selectedEmoticon ? ' selected' : ''}" onclick="pickEmoticon(this, '${e}')">${e}</div>
+    <div class="emoticon-item${e === selectedEmoticon ? ' selected' : ''}" onclick="pickEmoticon(this, '${e}')">
+      <img src="${e}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
+    </div>
   `).join('');
       }
 
@@ -3475,7 +3490,7 @@
       }
 
       async function selectEmoticon() {
-        document.getElementById('profileEmoticon').textContent = selectedEmoticon;
+        document.getElementById('profileEmoticon').innerHTML = renderEmoticonImg(selectedEmoticon, 48);
         if (currentUser) {
           currentUser.emoticon = selectedEmoticon;
 
@@ -3514,7 +3529,7 @@
         document.getElementById('rouletteParticipants').innerHTML = DEMO_MEMBERS.map(m => `
     <label style="display:flex;align-items:center;gap:4px;padding:6px 12px;background:var(--bg);border-radius:8px;cursor:pointer;font-size:13px;">
       <input type="checkbox" value="${m.nickname}" checked class="roulette-check">
-      ${m.emoticon} ${m.nickname}
+      ${renderEmoticonImg(m.emoticon, 20)} ${m.nickname}
     </label>
   `).join('');
       }
@@ -3591,7 +3606,8 @@
             ctx.fillStyle = 'white';
             ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText((memberEmojis[p] || '') + ' ' + p, r * 0.6, 5);
+            // 캔버스에서는 닉네임만 표시 (이미지는 캔버스에서 처리 불가)
+            ctx.fillText(p, r * 0.6, 5);
             ctx.restore();
           });
 
@@ -3621,7 +3637,7 @@
             // Done
             lastWinner = winner;
             document.getElementById('rouletteResult').innerHTML =
-              `🎉 <span style="color:var(--primary)">${memberEmojis[winner] || ''} ${winner}</span> 당첨!`;
+              `🎉 <span style="color:var(--primary)">${renderEmoticonImg(memberEmojis[winner], 24)} ${winner}</span> 당첨!`;
             document.getElementById('spinBtn').disabled = false;
 
             rouletteSpinHistory.push({
@@ -4027,7 +4043,7 @@
           ? '<p style="font-size:12px;color:var(--text-sub);padding:8px 0;">댓글이 없습니다</p>'
           : m.comments.map(c => `
       <div class="comment-item">
-        <div class="comment-avatar">${c.emoticon}</div>
+        <div class="comment-avatar">${renderEmoticonImg(c.emoticon, 28)}</div>
         <div class="comment-body">
           <div class="comment-author">${c.user}</div>
           <div class="comment-text">${c.text}</div>
@@ -4060,7 +4076,7 @@
         if (!text) return;
         m.comments.push({
           user: currentUser?.nickname || '아빠',
-          emoticon: currentUser?.emoticon || '😎',
+          emoticon: currentUser?.emoticon || 'imo/1.png',
           text,
           time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
         });
@@ -4272,7 +4288,7 @@
           days.forEach(d => {
             const name = DEMO_WEEKLY_SCHEDULE[d]?.[c] || '-';
             const emoji = DEMO_MEMBERS.find(m => m.nickname === name)?.emoticon || '';
-            tableHtml += `<td style="padding:6px;text-align:center;font-size:11px;">${emoji}<br>${name}</td>`;
+            tableHtml += `<td style="padding:6px;text-align:center;font-size:11px;">${renderEmoticonImg(emoji, 20)}<br>${name}</td>`;
           });
           tableHtml += '</tr>';
         });
@@ -4294,7 +4310,7 @@
         // Weight settings
         document.getElementById('weightSettings').innerHTML = DEMO_MEMBERS.map(m => `
     <div class="weight-row">
-      <span class="member-name">${m.emoticon} ${m.nickname}</span>
+      <span class="member-name">${renderEmoticonImg(m.emoticon, 20)} ${m.nickname}</span>
       <input type="range" min="1" max="10" value="5" class="weight-slider" data-member="${m.nickname}" oninput="this.nextElementSibling.textContent=this.value">
       <span class="weight-val">5</span>
     </div>
@@ -4312,7 +4328,7 @@
         const winner = pool[Math.floor(Math.random() * pool.length)];
         const emoji = DEMO_MEMBERS.find(m => m.nickname === winner)?.emoticon || '';
         document.getElementById('weightedRouletteResult').innerHTML =
-          `🎉 <span style="color:var(--primary)">${emoji} ${winner}</span> 당첨!`;
+          `🎉 <span style="color:var(--primary)">${renderEmoticonImg(emoji, 24)} ${winner}</span> 당첨!`;
         showToast('가중치 룰렛 결과: ' + winner);
       }
 

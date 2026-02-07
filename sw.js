@@ -1,9 +1,21 @@
 // Service Worker for Family Hub PWA
-const CACHE_NAME = 'family-hub-v1';
+const CACHE_NAME = 'family-hub-v2';
 const urlsToCache = [
     './',
     './index.html',
-    './manifest.json'
+    './manifest.json',
+    './imo/1.png',
+    './imo/2.png',
+    './imo/3.png',
+    './imo/4.png',
+    './imo/5.png',
+    './imo/6.png',
+    './imo/7.png',
+    './imo/8.png',
+    './imo/9.png',
+    './imo/10.png',
+    './imo/gp.png',
+    './imo/gm.png'
 ];
 
 // Install event - cache files
