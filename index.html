@@ -150,10 +150,11 @@
     /* === Pages Container === */
     .pages-container {
       flex: 1;
+      display: flex;
+      flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 80px;
     }
 
     /* === Tab Pages === */
@@ -165,22 +166,29 @@
 
     .page.active {
       display: block;
+      flex: 1;
+    }
+
+    /* === Bottom Nav Wrapper === */
+    .bottom-nav-wrapper {
+      position: sticky;
+      bottom: 0;
+      padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      margin-top: auto;
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+      z-index: 1000;
     }
 
     /* === Bottom Nav === */
     .bottom-nav {
-      position: fixed;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100% - 24px);
+      width: 100%;
       max-width: 406px;
+      margin: 0 auto;
       background: #FFFFFF;
       display: flex;
       justify-content: space-around;
       padding: 10px 8px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      z-index: 1000;
       border: 1px solid var(--border);
       border-radius: 24px;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
@@ -538,17 +546,18 @@
     }
 
     .family-member-card .avatar-large {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: white;
+      width: 52px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border: 2px solid white;
-      overflow: hidden;
+      background: transparent;
+    }
+
+    .family-member-card .avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     .family-member-card .member-name {
@@ -791,8 +800,9 @@
     /* === Emoticon Grid === */
     .emoticon-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 8px;
     }
 
     .emoticon-item {
@@ -800,23 +810,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
-      background: var(--bg);
-      border-radius: 12px;
+      background: transparent;
       cursor: pointer;
-      border: 2px solid transparent;
       transition: all 0.2s;
+      padding: 4px;
+    }
+
+    .emoticon-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     .emoticon-item:hover {
-      border-color: var(--primary);
-      transform: scale(1.05);
+      transform: scale(1.1);
     }
 
     .emoticon-item.selected {
-      border-color: var(--primary);
-      background: linear-gradient(135deg, rgba(242, 230, 238, 0.7), rgba(151, 125, 255, 0.2));
-      box-shadow: 0 4px 12px rgba(77, 182, 229, 0.3);
+      transform: scale(1.15);
+      filter: drop-shadow(0 4px 8px rgba(77, 182, 229, 0.5));
     }
 
     /* === Toast === */
@@ -1260,6 +1272,10 @@
         <div class="form-group">
           <label>비밀번호</label>
           <input type="password" id="loginPwInput" placeholder="비밀번호 입력" value="">
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="saveLoginCheckbox" style="width:18px;height:18px;cursor:pointer;">
+          <label for="saveLoginCheckbox" style="cursor:pointer;margin:0;font-size:14px;">로그인 정보 저장</label>
         </div>
         <button class="btn btn-primary btn-block" onclick="loginUser()">로그인</button>
       </div>
@@ -1726,8 +1742,8 @@
         <div class="card">
           <div class="card-title">👤 프로필 설정</div>
           <div style="text-align:center;margin-bottom:16px;">
-            <div class="avatar" style="width:64px;height:64px;font-size:36px;margin:0 auto 8px;" id="profileEmoticon">
-              😀
+            <div style="width:64px;height:64px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;" id="profileEmoticon">
+              <img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
             </div>
             <button class="btn btn-outline btn-sm" onclick="showModal('emoticonModal')">이모티콘 변경</button>
           </div>
@@ -1750,43 +1766,45 @@
         </div>
       </div>
 
-    </div><!-- End Pages Container -->
+      <!-- Bottom Navigation -->
+      <div class="bottom-nav-wrapper">
+        <div class="bottom-nav">
+          <button class="nav-item active" onclick="showPage('home')" data-page="home">
+            <span class="icon">🏠</span>
+            <span>홈</span>
+          </button>
+          <button class="nav-item" onclick="showPage('calendar')" data-page="calendar">
+            <span class="icon">📅</span>
+            <span>일정</span>
+          </button>
+          <button class="nav-item" onclick="showPage('chores')" data-page="chores">
+            <span class="icon">🧹</span>
+            <span>집안일</span>
+          </button>
+          <button class="nav-item" onclick="showPage('meetings')" data-page="meetings">
+            <span class="icon">📋</span>
+            <span>회의</span>
+          </button>
+          <button class="nav-item" onclick="showPage('votes')" data-page="votes">
+            <span class="icon">🗳️</span>
+            <span>투표</span>
+          </button>
+          <button class="nav-item" onclick="showPage('fines')" data-page="fines">
+            <span class="icon">💰</span>
+            <span>벌금</span>
+          </button>
+          <button class="nav-item" onclick="showPage('stats')" data-page="stats">
+            <span class="icon">📊</span>
+            <span>통계</span>
+          </button>
+          <button class="nav-item" onclick="showPage('settings')" data-page="settings">
+            <span class="icon">⚙</span>
+            <span>설정</span>
+          </button>
+        </div>
+      </div>
 
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-      <button class="nav-item active" onclick="showPage('home')" data-page="home">
-        <span class="icon">🏠</span>
-        <span>홈</span>
-      </button>
-      <button class="nav-item" onclick="showPage('calendar')" data-page="calendar">
-        <span class="icon">📅</span>
-        <span>일정</span>
-      </button>
-      <button class="nav-item" onclick="showPage('chores')" data-page="chores">
-        <span class="icon">🧹</span>
-        <span>집안일</span>
-      </button>
-      <button class="nav-item" onclick="showPage('meetings')" data-page="meetings">
-        <span class="icon">📋</span>
-        <span>회의</span>
-      </button>
-      <button class="nav-item" onclick="showPage('votes')" data-page="votes">
-        <span class="icon">🗳️</span>
-        <span>투표</span>
-      </button>
-      <button class="nav-item" onclick="showPage('fines')" data-page="fines">
-        <span class="icon">💰</span>
-        <span>벌금</span>
-      </button>
-      <button class="nav-item" onclick="showPage('stats')" data-page="stats">
-        <span class="icon">📊</span>
-        <span>통계</span>
-      </button>
-      <button class="nav-item" onclick="showPage('settings')" data-page="settings">
-        <span class="icon">⚙</span>
-        <span>설정</span>
-      </button>
-    </div>
+    </div><!-- End Pages Container -->
   </div>
 
   <!-- ========== MODALS ========== -->
@@ -2049,11 +2067,11 @@
       <div class="form-group">
         <label>이모티콘</label>
         <div style="display:flex;align-items:center;gap:12px;">
-          <div id="newMemberEmoticon" style="width:48px;height:48px;background:var(--bg-tertiary);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;" onclick="showMemberEmoticonPicker()"><img src="imo/1.png" alt="이모티콘" style="width:36px;height:36px;object-fit:contain;"></div>
+          <div id="newMemberEmoticon" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="showMemberEmoticonPicker()"><img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;"></div>
           <span style="font-size:12px;color:var(--text-sub);">클릭하여 변경</span>
         </div>
-        <div id="memberEmoticonPicker" style="display:none;margin-top:8px;background:var(--bg-tertiary);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;">
-          <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;" id="memberEmoticonGrid"></div>
+        <div id="memberEmoticonPicker" style="display:none;margin-top:8px;background:var(--bg-tertiary);border-radius:8px;padding:8px;max-height:150px;overflow-y:auto;">
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;" id="memberEmoticonGrid"></div>
         </div>
       </div>
       <div class="form-group">
@@ -2197,7 +2215,7 @@
       let currentUser = null;
       let currentFamily = null;
       let calendarDate = new Date();
-      let selectedEmoticon = 'imo/1.png';
+      let selectedEmoticon = './imo/1.png';
       let isAdminLoggedIn = false;
 
       // 'test' = 전체 데이터 표시, 'prod' = 가족 생성 시 예시 데이터만 표시
@@ -2225,7 +2243,7 @@
             DEMO_MEMBERS = members.map(m => ({
               nickname: m.nickname,
               role: m.role || 'member',
-              emoticon: m.emoticon || 'imo/1.png'
+              emoticon: m.emoticon || './imo/1.png'
             }));
             console.log('구성원 로드:', DEMO_MEMBERS.length);
           }
@@ -2308,6 +2326,64 @@
             console.log('배정 로드 완료');
           }
 
+          // 6. 벌금 규칙 로드
+          const { data: fineRules, error: fineRulesErr } = await sbClient
+            .from('fine_rules')
+            .select('*')
+            .eq('family_id', familyId);
+
+          if (!fineRulesErr && fineRules) {
+            DEMO_FINE_RULES = fineRules.map(r => ({
+              id: r.id,
+              trigger: r.trigger || 'custom',
+              desc: r.description || '',
+              amount: r.amount || 1000
+            }));
+            console.log('벌금 규칙 로드:', DEMO_FINE_RULES.length);
+          }
+
+          // 7. 회의 로드
+          const { data: meetings, error: meetingsErr } = await sbClient
+            .from('meetings')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: false });
+
+          if (!meetingsErr && meetings) {
+            DEMO_MEETINGS = meetings.map(m => ({
+              id: m.id,
+              title: m.title,
+              date: m.meeting_date || '',
+              time: m.meeting_time || '20:00',
+              agenda: m.agenda || '',
+              status: m.status || 'upcoming',
+              comments: [],
+              minutes: m.minutes || '',
+              actionItems: m.action_items ? JSON.parse(m.action_items) : []
+            }));
+            console.log('회의 로드:', DEMO_MEETINGS.length);
+          }
+
+          // 8. 투표 로드
+          const { data: votes, error: votesErr } = await sbClient
+            .from('votes')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: false });
+
+          if (!votesErr && votes) {
+            DEMO_VOTES = votes.map(v => ({
+              id: v.id,
+              title: v.title,
+              anonymous: v.is_anonymous || false,
+              multiple: v.is_multiple || false,
+              deadline: v.deadline || '',
+              status: v.status || 'active',
+              options: v.options ? JSON.parse(v.options) : []
+            }));
+            console.log('투표 로드:', DEMO_VOTES.length);
+          }
+
           showToast('가족 데이터를 불러왔습니다');
         } catch (e) {
           console.error('가족 데이터 로드 실패:', e);
@@ -2329,9 +2405,9 @@
 
       // 이모티콘 이미지 목록 (imo 폴더)
       const EMOTICONS = [
-        'imo/1.png', 'imo/2.png', 'imo/3.png', 'imo/4.png', 'imo/5.png',
-        'imo/6.png', 'imo/7.png', 'imo/8.png', 'imo/9.png', 'imo/10.png',
-        'imo/gp.png', 'imo/gm.png'
+        './imo/1.png', './imo/2.png', './imo/3.png', './imo/4.png', './imo/5.png',
+        './imo/6.png', './imo/7.png', './imo/8.png', './imo/9.png', './imo/10.png',
+        './imo/gp.png', './imo/gm.png'
       ];
 
       var DEMO_MEMBERS = [];
@@ -2375,7 +2451,7 @@
 
       function resetDemoDataForProduction() {
         const adminName = (currentUser && currentUser.nickname) ? currentUser.nickname : '가족장';
-        const adminEmoticon = (currentUser && currentUser.emoticon) ? currentUser.emoticon : 'imo/1.png';
+        const adminEmoticon = (currentUser && currentUser.emoticon) ? currentUser.emoticon : './imo/1.png';
 
         // 가족 생성 시 모든 데이터를 빈 상태로 초기화
         DEMO_MEMBERS = [
@@ -2482,6 +2558,32 @@
       ];
 
       // ========== AUTH ==========
+      // 저장된 로그인 정보 불러오기
+      function loadSavedLogin() {
+        const savedLogin = localStorage.getItem('familyHubLogin');
+        if (savedLogin) {
+          try {
+            const { id, pw } = JSON.parse(savedLogin);
+            document.getElementById('loginIdInput').value = id || '';
+            document.getElementById('loginPwInput').value = pw || '';
+            document.getElementById('saveLoginCheckbox').checked = true;
+          } catch (e) {
+            console.error('저장된 로그인 정보 파싱 오류:', e);
+            localStorage.removeItem('familyHubLogin');
+          }
+        }
+      }
+
+      // 로그인 정보 저장
+      function saveLoginCredentials(id, pw) {
+        const saveCheckbox = document.getElementById('saveLoginCheckbox');
+        if (saveCheckbox && saveCheckbox.checked) {
+          localStorage.setItem('familyHubLogin', JSON.stringify({ id, pw }));
+        } else {
+          localStorage.removeItem('familyHubLogin');
+        }
+      }
+
       async function loginUser() {
         const id = document.getElementById('loginIdInput').value.trim();
         const pw = document.getElementById('loginPwInput').value.trim();
@@ -2491,6 +2593,7 @@
         const account = DEMO_ACCOUNTS.find(a => a.id === id && a.pw === pw);
 
         if (account) {
+          saveLoginCredentials(id, pw);
           currentFamily = { name: account.family, code: generateCode() };
           currentUser = { nickname: account.nickname, role: account.role, emoticon: account.emoticon, loginId: account.id };
           enterApp();
@@ -2525,8 +2628,9 @@
                 if (familyError) {
                   appendOutput('가족 정보 조회 실패: ' + familyError.message, 'error');
                 } else if (familyData) {
+                  saveLoginCredentials(id, pw);
                   currentFamily = { name: familyData.family_name, code: familyData.family_code, id: familyData.id };
-                  currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || 'imo/1.png', loginId: id };
+                  currentUser = { nickname: userData.nickname, role: userData.role, emoticon: userData.emoticon || './imo/1.png', loginId: id };
                   enterApp();
                   showToast(userData.nickname + '님 환영합니다!');
                   return;
@@ -2989,6 +3093,16 @@
         document.getElementById('authScreen').style.display = 'flex';
         currentUser = null;
         currentFamily = null;
+
+        // 저장된 로그인 정보가 없으면 입력값 초기화
+        const savedLogin = localStorage.getItem('familyHubLogin');
+        if (!savedLogin) {
+          document.getElementById('loginIdInput').value = '';
+          document.getElementById('loginPwInput').value = '';
+          document.getElementById('saveLoginCheckbox').checked = false;
+        }
+
+        showAuthTab('login');
         showToast('로그아웃되었습니다');
       }
 
@@ -3116,31 +3230,55 @@
         `;
       }
 
-      window.toggleTodayEvent = function (id) {
+      window.toggleTodayEvent = async function (id) {
         const item = TODAY_EVENTS.find(e => e.id === id);
         if (item) {
           item.done = !item.done;
           renderTodayEvents();
           showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id && item.dbId) {
+            try {
+              const { error } = await sbClient.from('events')
+                .update({ is_done: item.done })
+                .eq('id', item.dbId);
+              if (error) console.error('일정 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('일정 상태 업데이트 에러:', e);
+            }
+          }
         }
       };
 
-      window.toggleTodayChore = function (id) {
+      window.toggleTodayChore = async function (id) {
         const item = TODAY_CHORES.find(c => c.id === id);
         if (item) {
           item.done = !item.done;
           renderTodayChores();
           showToast(item.done ? '✓ 완료 처리되었습니다!' : '대기 상태로 변경되었습니다.');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id && item.dbId) {
+            try {
+              const { error } = await sbClient.from('chores')
+                .update({ is_done: item.done })
+                .eq('id', item.dbId);
+              if (error) console.error('집안일 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('집안일 상태 업데이트 에러:', e);
+            }
+          }
         }
       };
 
       // 이모티콘 렌더링 헬퍼 함수
       function renderEmoticonImg(emoticon, size = 48) {
-        if (emoticon && emoticon.startsWith('imo/')) {
-          return `<img src="${emoticon}" alt="이모티콘" style="width:${size}px;height:${size}px;object-fit:contain;">`;
+        if (emoticon && emoticon.startsWith('./imo/')) {
+          return `<img src="${emoticon}" alt="이모티콘" style="max-width:${size}px;max-height:${size}px;width:100%;height:100%;object-fit:contain;">`;
         }
         // 기존 이모지 호환
-        return `<img src="imo/1.png" alt="이모티콘" style="width:${size}px;height:${size}px;object-fit:contain;">`;
+        return `<img src="./imo/1.png" alt="이모티콘" style="max-width:${size}px;max-height:${size}px;width:100%;height:100%;object-fit:contain;">`;
       }
 
       function renderFamilyMembers() {
@@ -3159,15 +3297,15 @@
       }
 
       // 구성원 추가용 이모티콘 선택
-      let newMemberEmoticon = 'imo/1.png';
+      let newMemberEmoticon = './imo/1.png';
 
       function showMemberEmoticonPicker() {
         const picker = document.getElementById('memberEmoticonPicker');
         const grid = document.getElementById('memberEmoticonGrid');
         if (picker.style.display === 'none') {
           grid.innerHTML = EMOTICONS.map(e =>
-            `<div style="cursor:pointer;text-align:center;padding:4px;border-radius:4px;${e === newMemberEmoticon ? 'background:var(--accent-purple);' : ''}" onclick="selectMemberEmoticon('${e}')">
-              <img src="${e}" alt="이모티콘" style="width:32px;height:32px;object-fit:contain;">
+            `<div style="cursor:pointer;padding:4px;${e === newMemberEmoticon ? 'transform:scale(1.15);filter:drop-shadow(0 2px 4px rgba(77,182,229,0.5));' : ''}" onclick="selectMemberEmoticon('${e}')">
+              <img src="${e}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">
             </div>`
           ).join('');
           picker.style.display = 'block';
@@ -3178,7 +3316,7 @@
 
       function selectMemberEmoticon(emoticon) {
         newMemberEmoticon = emoticon;
-        document.getElementById('newMemberEmoticon').innerHTML = renderEmoticonImg(emoticon, 24);
+        document.getElementById('newMemberEmoticon').innerHTML = `<img src="${emoticon}" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">`;
         document.getElementById('memberEmoticonPicker').style.display = 'none';
       }
 
@@ -3328,8 +3466,8 @@
         document.getElementById('newMemberLoginId').value = '';
         document.getElementById('newMemberPassword').value = '';
         document.getElementById('newMemberRole').value = 'member';
-        newMemberEmoticon = 'imo/1.png';
-        document.getElementById('newMemberEmoticon').innerHTML = '<img src="imo/1.png" alt="이모티콘" style="width:36px;height:36px;object-fit:contain;">';
+        newMemberEmoticon = './imo/1.png';
+        document.getElementById('newMemberEmoticon').innerHTML = '<img src="./imo/1.png" alt="이모티콘" style="width:100%;height:100%;object-fit:contain;">';
 
         showToast(`${nickname}님이 추가되었습니다!`);
       }
@@ -3996,12 +4134,38 @@
         showToast('집안일이 추가되었습니다');
       }
 
-      function addFineRule() {
+      async function addFineRule() {
         const trigger = document.getElementById('fineRuleTrigger').value;
         const desc = document.getElementById('fineRuleDesc').value.trim();
         const amount = parseInt(document.getElementById('fineRuleAmount').value) || 1000;
         if (!desc) return showToast('설명을 입력하세요');
-        DEMO_FINE_RULES.push({ trigger, desc, amount });
+
+        // 로컬 데이터에 추가
+        const ruleId = crypto.randomUUID();
+        DEMO_FINE_RULES.push({ id: ruleId, trigger, desc, amount });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('fine_rules').insert({
+              id: ruleId,
+              family_id: currentFamily.id,
+              trigger: trigger,
+              description: desc,
+              amount: amount,
+              is_active: true
+            });
+            if (error) {
+              console.error('벌금 규칙 저장 실패:', error);
+              appendOutput('벌금 규칙 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('벌금 규칙 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('벌금 규칙 저장 에러:', e);
+          }
+        }
+
         renderFines();
         hideModal('fineRuleModal');
         showToast('벌금 규칙이 추가되었습니다');
@@ -4069,23 +4233,25 @@
   `).join('');
       }
 
-      function addComment() {
+      async function addComment() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (!m) return;
         const text = document.getElementById('commentInput').value.trim();
         if (!text) return;
         m.comments.push({
           user: currentUser?.nickname || '아빠',
-          emoticon: currentUser?.emoticon || 'imo/1.png',
+          emoticon: currentUser?.emoticon || './imo/1.png',
           text,
           time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
         });
         document.getElementById('commentInput').value = '';
         viewMeeting(m.id);
         showToast('댓글이 추가되었습니다');
+
+        // Supabase 업데이트 (comments는 로컬 전용으로 처리 - DB에 comments 컬럼이 없을 수 있음)
       }
 
-      function addActionItem() {
+      async function addActionItem() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (!m) return;
         const text = document.getElementById('actionItemInput').value.trim();
@@ -4095,39 +4261,119 @@
         document.getElementById('actionItemInput').value = '';
         renderActionItems(m);
         showToast('액션 아이템이 추가되었습니다');
+
+        // Supabase 업데이트
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('meetings')
+              .update({ action_items: JSON.stringify(m.actionItems) })
+              .eq('id', selectedMeetingId);
+            if (error) console.error('액션 아이템 저장 실패:', error);
+          } catch (e) {
+            console.error('액션 아이템 저장 에러:', e);
+          }
+        }
       }
 
-      function toggleActionItem(meetingId, idx) {
+      async function toggleActionItem(meetingId, idx) {
         const m = DEMO_MEETINGS.find(x => x.id === meetingId);
         if (m) {
           m.actionItems[idx].done = !m.actionItems[idx].done;
           renderActionItems(m);
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ action_items: JSON.stringify(m.actionItems) })
+                .eq('id', meetingId);
+              if (error) console.error('액션 아이템 업데이트 실패:', error);
+            } catch (e) {
+              console.error('액션 아이템 업데이트 에러:', e);
+            }
+          }
         }
       }
 
-      function saveMeetingMinutes() {
+      async function saveMeetingMinutes() {
         const m = DEMO_MEETINGS.find(x => x.id === selectedMeetingId);
         if (m) {
           m.minutes = document.getElementById('meetingMinutes').value;
           showToast('회의록이 저장되었습니다');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ minutes: m.minutes })
+                .eq('id', selectedMeetingId);
+              if (error) console.error('회의록 저장 실패:', error);
+            } catch (e) {
+              console.error('회의록 저장 에러:', e);
+            }
+          }
         }
       }
 
-      function completeMeeting(id) {
+      async function completeMeeting(id) {
         const m = DEMO_MEETINGS.find(x => x.id === id);
-        if (m) { m.status = 'done'; renderMeetings(); showToast('회의가 완료되었습니다'); }
+        if (m) {
+          m.status = 'done';
+          renderMeetings();
+          showToast('회의가 완료되었습니다');
+
+          // Supabase 업데이트
+          if (sbClient && currentFamily?.id) {
+            try {
+              const { error } = await sbClient.from('meetings')
+                .update({ status: 'done' })
+                .eq('id', id);
+              if (error) console.error('회의 상태 업데이트 실패:', error);
+            } catch (e) {
+              console.error('회의 상태 업데이트 에러:', e);
+            }
+          }
+        }
       }
 
-      function addMeeting() {
+      async function addMeeting() {
         const title = document.getElementById('meetingTitle').value.trim();
         if (!title) return showToast('제목을 입력하세요');
         const date = document.getElementById('meetingDate').value || new Date().toISOString().slice(0, 10);
         const time = document.getElementById('meetingTime').value || '20:00';
         const agenda = document.getElementById('meetingAgenda').value;
+
+        const meetingId = crypto.randomUUID();
         DEMO_MEETINGS.unshift({
-          id: Date.now(), title, date, time, agenda, status: 'upcoming',
+          id: meetingId, title, date, time, agenda, status: 'upcoming',
           comments: [], minutes: '', actionItems: []
         });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('meetings').insert({
+              id: meetingId,
+              family_id: currentFamily.id,
+              title: title,
+              meeting_date: date,
+              meeting_time: time,
+              agenda: agenda,
+              status: 'upcoming',
+              minutes: '',
+              created_by: currentUser?.nickname || null
+            });
+            if (error) {
+              console.error('회의 저장 실패:', error);
+              appendOutput('회의 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('회의 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('회의 저장 에러:', e);
+          }
+        }
+
         renderMeetings();
         hideModal('meetingModal');
         showToast('회의가 생성되었습니다');
@@ -4192,7 +4438,7 @@
         return html;
       }
 
-      function castVote(voteId, optIdx) {
+      async function castVote(voteId, optIdx) {
         const v = DEMO_VOTES.find(x => x.id === voteId);
         if (!v || v.status === 'closed') return;
         if (new Date(v.deadline) < new Date()) return showToast('투표가 마감되었습니다');
@@ -4215,6 +4461,18 @@
 
         renderVotes();
         showToast('투표가 반영되었습니다');
+
+        // Supabase 업데이트
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('votes')
+              .update({ options: JSON.stringify(v.options) })
+              .eq('id', voteId);
+            if (error) console.error('투표 업데이트 실패:', error);
+          } catch (e) {
+            console.error('투표 업데이트 에러:', e);
+          }
+        }
       }
 
       function addVoteOptionInput() {
@@ -4226,7 +4484,7 @@
         container.appendChild(div);
       }
 
-      function createVote() {
+      async function createVote() {
         const title = document.getElementById('voteTitle').value.trim();
         if (!title) return showToast('제목을 입력하세요');
 
@@ -4238,10 +4496,38 @@
         const anonymous = document.getElementById('voteAnonymous').value === 'true';
         const multiple = document.getElementById('voteMultiple').value === 'true';
 
+        const voteId = crypto.randomUUID();
+        const voteOptions = options.map(t => ({ text: t, votes: [] }));
+
         DEMO_VOTES.unshift({
-          id: Date.now(), title, anonymous, multiple, deadline, status: 'active',
-          options: options.map(t => ({ text: t, votes: [] }))
+          id: voteId, title, anonymous, multiple, deadline, status: 'active',
+          options: voteOptions
         });
+
+        // Supabase에 저장
+        if (sbClient && currentFamily?.id) {
+          try {
+            const { error } = await sbClient.from('votes').insert({
+              id: voteId,
+              family_id: currentFamily.id,
+              title: title,
+              is_anonymous: anonymous,
+              is_multiple: multiple,
+              deadline: new Date(deadline).toISOString(),
+              status: 'active',
+              options: JSON.stringify(voteOptions),
+              created_by: currentUser?.nickname || null
+            });
+            if (error) {
+              console.error('투표 저장 실패:', error);
+              appendOutput('투표 저장 실패: ' + error.message, 'error');
+            } else {
+              appendOutput('투표 Supabase 저장 완료');
+            }
+          } catch (e) {
+            console.error('투표 저장 에러:', e);
+          }
+        }
 
         renderVotes();
         hideModal('voteModal');
@@ -4666,6 +4952,9 @@
 
           // 자동으로 Supabase 연결
           await autoConnectSupabase();
+
+          // 저장된 로그인 정보 불러오기
+          loadSavedLogin();
 
           // 초대 링크 확인
           checkInviteLink();
