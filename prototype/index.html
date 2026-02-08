@@ -2210,7 +2210,8 @@
       "use strict";
 
       // ========== 이모티콘 상수 (최상단 정의) ==========
-      const EMOTICON_BASE_URL = './imo/';
+      // GitHub raw content URL 사용 (GitHub Pages에서 이미지 접근 문제 해결)
+      const EMOTICON_BASE_URL = 'https://raw.githubusercontent.com/yousam4u/Family/master/prototype/imo/';
       const DEFAULT_EMOTICON = EMOTICON_BASE_URL + '1.png';
       const EMOTICONS = [
         EMOTICON_BASE_URL + '1.png', EMOTICON_BASE_URL + '2.png', EMOTICON_BASE_URL + '3.png',
