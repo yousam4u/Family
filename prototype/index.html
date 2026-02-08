@@ -2208,6 +2208,17 @@
   <script>
     (function () {
       "use strict";
+
+      // ========== 이모티콘 상수 (최상단 정의) ==========
+      const EMOTICON_BASE_URL = 'https://yousam4u.github.io/Family/prototype/imo/';
+      const DEFAULT_EMOTICON = EMOTICON_BASE_URL + '1.png';
+      const EMOTICONS = [
+        EMOTICON_BASE_URL + '1.png', EMOTICON_BASE_URL + '2.png', EMOTICON_BASE_URL + '3.png',
+        EMOTICON_BASE_URL + '4.png', EMOTICON_BASE_URL + '5.png', EMOTICON_BASE_URL + '6.png',
+        EMOTICON_BASE_URL + '7.png', EMOTICON_BASE_URL + '8.png', EMOTICON_BASE_URL + '9.png',
+        EMOTICON_BASE_URL + '10.png', EMOTICON_BASE_URL + 'gp.png', EMOTICON_BASE_URL + 'gm.png'
+      ];
+
       // ========== STATE ==========
       var sbClient = null;
       var sbConnecting = null;
@@ -2402,20 +2413,6 @@
         TODAY_EVENTS = [];
         TODAY_CHORES = [];
       }
-
-      // 이모티콘 베이스 URL (GitHub Pages 배포용)
-      const EMOTICON_BASE_URL = 'https://yousam4u.github.io/Family/prototype/imo/';
-
-      // 이모티콘 이미지 목록
-      const EMOTICONS = [
-        EMOTICON_BASE_URL + '1.png', EMOTICON_BASE_URL + '2.png', EMOTICON_BASE_URL + '3.png',
-        EMOTICON_BASE_URL + '4.png', EMOTICON_BASE_URL + '5.png', EMOTICON_BASE_URL + '6.png',
-        EMOTICON_BASE_URL + '7.png', EMOTICON_BASE_URL + '8.png', EMOTICON_BASE_URL + '9.png',
-        EMOTICON_BASE_URL + '10.png', EMOTICON_BASE_URL + 'gp.png', EMOTICON_BASE_URL + 'gm.png'
-      ];
-
-      // 기본 이모티콘
-      const DEFAULT_EMOTICON = EMOTICON_BASE_URL + '1.png';
 
       var DEMO_MEMBERS = [];
 
