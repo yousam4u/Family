@@ -1420,7 +1420,7 @@
       <div class="page" id="page-calendar">
         <div class="section-title">
           <span>📅 일정 관리</span>
-          <button class="btn btn-primary btn-sm" onclick="showModal('eventModal')">+ 일정 추가</button>
+          <button class="btn btn-primary btn-sm" onclick="showAddEvent()">+ 일정 추가</button>
         </div>
 
         <div class="card">
@@ -1851,7 +1851,9 @@
   <!-- Event Modal -->
   <div class="modal-overlay" id="eventModal">
     <div class="modal">
-      <h3>📅 일정 추가</h3>
+      <h3 id="eventModalTitle">📅 일정 추가</h3>
+      <input type="hidden" id="editEventId">
+      <input type="hidden" id="editEventDateKey">
       <div class="form-group">
         <label>제목</label>
         <input type="text" id="eventTitle" placeholder="일정 제목">
@@ -1886,9 +1888,12 @@
         <label>반복 종료일</label>
         <input type="date" id="eventRecurrenceEnd">
       </div>
+      <div id="eventDeleteBtn" style="display:none;margin-top:12px;">
+        <button class="btn btn-outline" style="width:100%;color:var(--danger);border-color:var(--danger);" onclick="deleteEvent()">🗑️ 일정 삭제</button>
+      </div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button class="btn btn-outline" style="flex:1;" onclick="hideModal('eventModal')">취소</button>
-        <button class="btn btn-primary" style="flex:1;" onclick="addEvent()">추가</button>
+        <button class="btn btn-primary" style="flex:1;" id="eventSubmitBtn" onclick="saveEvent()">추가</button>
       </div>
     </div>
   </div>
@@ -3532,6 +3537,7 @@
       }
 
       function selectDate(dateKey) {
+        selectedCalendarDate = dateKey; // Track selected date
         const allEvents = DEMO_EVENTS[dateKey];
         const el = document.getElementById('selectedDateEvents');
 
@@ -3543,13 +3549,19 @@
         }
 
         if (!allEvents || allEvents.length === 0) {
-          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>';
+          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>' +
+            '<button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="showAddEvent(\'' + dateKey + '\')">+ 이 날짜에 일정 추가</button>';
           return;
         }
 
         // 개인 일정 필터링: 가족 일정은 모두 표시, 개인 일정은 본인 것만 표시
         const currentNickname = currentUser ? currentUser.nickname : null;
-        const events = allEvents.filter(function (e) {
+
+        // Create indexed list to track original indices
+        const indexedEvents = allEvents.map(function(e, idx) {
+          return { event: e, originalIndex: idx };
+        }).filter(function(item) {
+          var e = item.event;
           if (e.scope === 'family') return true;
           if (e.scope === 'personal') {
             return !e.createdBy || e.createdBy === currentNickname;
@@ -3557,21 +3569,27 @@
           return true;
         });
 
-        if (events.length === 0) {
-          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>';
+        if (indexedEvents.length === 0) {
+          el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>' +
+            '<button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="showAddEvent(\'' + dateKey + '\')">+ 이 날짜에 일정 추가</button>';
           return;
         }
 
-        el.innerHTML = events.map(function (e) {
+        el.innerHTML = indexedEvents.map(function (item) {
+          var e = item.event;
+          var idx = item.originalIndex;
           var recLabel = e.recurrence && e.recurrence !== 'none' ? ' · 🔁 ' + (RECURRENCE_LABELS[e.recurrence] || '반복') : '';
-          return '<div class="chore-item">' +
+          var canEdit = e.scope === 'family' || e.createdBy === currentNickname || !e.createdBy;
+          return '<div class="chore-item" style="cursor:' + (canEdit ? 'pointer' : 'default') + ';" ' + (canEdit ? 'onclick="showEditEvent(\'' + dateKey + '\',' + idx + ')"' : '') + '>' +
             '<span class="chore-icon">' + (e.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤') + '</span>' +
-            '<div class="chore-info">' +
+            '<div class="chore-info" style="flex:1;">' +
             '<div class="chore-title">' + e.title + '</div>' +
             '<div class="chore-meta">' + e.time + ' · ' + (e.scope === 'family' ? '가족' : '개인') + recLabel + '</div>' +
             '</div>' +
+            (canEdit ? '<span style="color:var(--text-sub);font-size:12px;">✏️</span>' : '') +
             '</div>';
-        }).join('');
+        }).join('') +
+        '<button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="showAddEvent(\'' + dateKey + '\')">+ 이 날짜에 일정 추가</button>';
       }
 
       function renderChores() {
@@ -3835,11 +3853,185 @@
       }
 
       // ========== EVENTS ==========
-      var allEvents = []; // { title, date(YYYY-MM-DD), time, scope, recurrence, recurrenceEnd }
+      var allEvents = []; // { id, title, date(YYYY-MM-DD), time, scope, recurrence, recurrenceEnd }
+      var selectedCalendarDate = null; // Currently selected date in calendar
+      var eventIdCounter = 1; // For generating unique event IDs
 
       const RECURRENCE_LABELS = {
         none: '', daily: '매일', weekly: '매주', biweekly: '격주', monthly: '매월', yearly: '매년'
       };
+
+      function generateEventId() {
+        return 'ev-' + Date.now() + '-' + (eventIdCounter++);
+      }
+
+      function showAddEvent(presetDate) {
+        document.getElementById('eventModalTitle').textContent = '📅 일정 추가';
+        document.getElementById('editEventId').value = '';
+        document.getElementById('editEventDateKey').value = '';
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventDate').value = presetDate || new Date().toISOString().slice(0, 10);
+        document.getElementById('eventTime').value = '';
+        document.getElementById('eventScope').value = 'family';
+        document.getElementById('eventRecurrence').value = 'none';
+        document.getElementById('eventRecurrenceEnd').value = '';
+        document.getElementById('recurrenceEndGroup').style.display = 'none';
+        document.getElementById('eventDeleteBtn').style.display = 'none';
+        document.getElementById('eventSubmitBtn').textContent = '추가';
+        showModal('eventModal');
+      }
+
+      function showEditEvent(dateKey, eventIndex) {
+        const events = DEMO_EVENTS[dateKey];
+        if (!events || !events[eventIndex]) return;
+
+        const ev = events[eventIndex];
+        document.getElementById('eventModalTitle').textContent = '📅 일정 수정';
+        document.getElementById('editEventId').value = eventIndex;
+        document.getElementById('editEventDateKey').value = dateKey;
+        document.getElementById('eventTitle').value = ev.title;
+        document.getElementById('eventDate').value = dateKey;
+        document.getElementById('eventTime').value = ev.time === '종일' ? '' : ev.time;
+        document.getElementById('eventScope').value = ev.scope || 'family';
+        document.getElementById('eventRecurrence').value = ev.recurrence || 'none';
+        document.getElementById('eventRecurrenceEnd').value = '';
+        document.getElementById('recurrenceEndGroup').style.display = ev.recurrence && ev.recurrence !== 'none' ? 'block' : 'none';
+        document.getElementById('eventDeleteBtn').style.display = 'block';
+        document.getElementById('eventSubmitBtn').textContent = '저장';
+        showModal('eventModal');
+      }
+
+      function deleteEvent() {
+        const dateKey = document.getElementById('editEventDateKey').value;
+        const eventIndex = parseInt(document.getElementById('editEventId').value);
+
+        if (!dateKey || isNaN(eventIndex)) return;
+
+        const events = DEMO_EVENTS[dateKey];
+        if (!events || !events[eventIndex]) return;
+
+        const ev = events[eventIndex];
+
+        // Remove from DEMO_EVENTS
+        events.splice(eventIndex, 1);
+        if (events.length === 0) {
+          delete DEMO_EVENTS[dateKey];
+        }
+
+        // Remove from TODAY_EVENTS if applicable
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (dateKey === todayStr) {
+          const todayIndex = TODAY_EVENTS.findIndex(e => e.title === ev.title);
+          if (todayIndex !== -1) {
+            TODAY_EVENTS.splice(todayIndex, 1);
+            renderTodayEvents();
+          }
+        }
+
+        // Delete from Supabase if connected
+        if (sbClient && ev.id) {
+          sbClient.from('events').delete().eq('id', ev.id).then(function(res) {
+            if (res.error) appendOutput('일정 삭제 실패: ' + res.error.message, 'error');
+            else appendOutput('일정 Supabase 삭제 완료');
+          });
+        }
+
+        renderCalendar();
+        selectDate(dateKey);
+        hideModal('eventModal');
+        showToast('일정이 삭제되었습니다');
+      }
+
+      function saveEvent() {
+        const editEventId = document.getElementById('editEventId').value;
+        const editDateKey = document.getElementById('editEventDateKey').value;
+        const isEdit = editEventId !== '' && editDateKey !== '';
+
+        if (isEdit) {
+          updateEvent();
+        } else {
+          addEvent();
+        }
+      }
+
+      function updateEvent() {
+        const oldDateKey = document.getElementById('editEventDateKey').value;
+        const eventIndex = parseInt(document.getElementById('editEventId').value);
+
+        const title = document.getElementById('eventTitle').value.trim();
+        const date = document.getElementById('eventDate').value;
+        const time = document.getElementById('eventTime').value;
+        const scope = document.getElementById('eventScope').value;
+        const recurrence = document.getElementById('eventRecurrence').value;
+
+        if (!title) return showToast('제목을 입력하세요');
+
+        const newDateKey = date || new Date().toISOString().slice(0, 10);
+        const events = DEMO_EVENTS[oldDateKey];
+        if (!events || !events[eventIndex]) return;
+
+        const oldEvent = events[eventIndex];
+        const updatedEvent = {
+          ...oldEvent,
+          title,
+          time: time || '종일',
+          scope,
+          recurrence
+        };
+
+        // If date changed, move to new date
+        if (oldDateKey !== newDateKey) {
+          // Remove from old date
+          events.splice(eventIndex, 1);
+          if (events.length === 0) {
+            delete DEMO_EVENTS[oldDateKey];
+          }
+          // Add to new date
+          if (!DEMO_EVENTS[newDateKey]) DEMO_EVENTS[newDateKey] = [];
+          DEMO_EVENTS[newDateKey].push(updatedEvent);
+        } else {
+          // Update in place
+          events[eventIndex] = updatedEvent;
+        }
+
+        // Update TODAY_EVENTS if applicable
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (oldDateKey === todayStr || newDateKey === todayStr) {
+          // Remove old
+          const oldTodayIdx = TODAY_EVENTS.findIndex(e => e.title === oldEvent.title);
+          if (oldTodayIdx !== -1) TODAY_EVENTS.splice(oldTodayIdx, 1);
+          // Add new if it's today
+          if (newDateKey === todayStr) {
+            TODAY_EVENTS.push({
+              id: generateEventId(),
+              title,
+              time: time || '종일',
+              scope: scope === 'family' ? '가족' : '개인',
+              icon: scope === 'family' ? '👨‍👩‍👧‍👦' : '👤',
+              done: false
+            });
+          }
+          renderTodayEvents();
+        }
+
+        // Update in Supabase if connected
+        if (sbClient && oldEvent.id) {
+          const startAt = new Date(newDateKey + 'T' + (time || '00:00'));
+          sbClient.from('events').update({
+            title, scope,
+            start_at: startAt.toISOString(),
+            recurrence_rule: recurrence !== 'none' ? recurrenceToRRule(recurrence) : null,
+          }).eq('id', oldEvent.id).then(function(res) {
+            if (res.error) appendOutput('일정 수정 실패: ' + res.error.message, 'error');
+            else appendOutput('일정 Supabase 수정 완료');
+          });
+        }
+
+        renderCalendar();
+        selectDate(newDateKey);
+        hideModal('eventModal');
+        showToast('일정이 수정되었습니다');
+      }
 
       function addEvent() {
         const title = document.getElementById('eventTitle').value.trim();
@@ -3859,6 +4051,7 @@
         const dateKey = eventDate; // Already in YYYY-MM-DD format
         if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
         const eventObj = {
+          id: generateEventId(),
           title,
           time: time || '종일',
           scope,
@@ -3866,6 +4059,11 @@
           createdBy: currentUser ? currentUser.nickname : null
         };
         DEMO_EVENTS[dateKey].push(eventObj);
+
+        // Update selected calendar date display
+        if (selectedCalendarDate === dateKey) {
+          selectDate(dateKey);
+        }
 
         // Add to TODAY_EVENTS if it's today
         const todayStr = new Date().toISOString().slice(0, 10);
@@ -5080,6 +5278,11 @@
       window.changeMonth = changeMonth;
       window.selectDate = selectDate;
       window.addEvent = addEvent;
+      window.saveEvent = saveEvent;
+      window.showAddEvent = showAddEvent;
+      window.showEditEvent = showEditEvent;
+      window.deleteEvent = deleteEvent;
+      window.updateEvent = updateEvent;
       window.addChore = addChore;
       window.addFamilyMember = addFamilyMember;
       window.showMemberEmoticonPicker = showMemberEmoticonPicker;
