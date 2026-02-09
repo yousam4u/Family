@@ -1,9 +1,19 @@
 // Service Worker for Family Hub PWA
-const CACHE_NAME = 'family-hub-v2';
+const CACHE_NAME = 'family-hub-v3';
 const urlsToCache = [
     './',
     './index.html',
     './manifest.json',
+    // Icons for PWA
+    './icons/icon-72x72.png',
+    './icons/icon-96x96.png',
+    './icons/icon-128x128.png',
+    './icons/icon-144x144.png',
+    './icons/icon-152x152.png',
+    './icons/icon-192x192.png',
+    './icons/icon-384x384.png',
+    './icons/icon-512x512.png',
+    // Emoticons
     './imo/1.png',
     './imo/2.png',
     './imo/3.png',
