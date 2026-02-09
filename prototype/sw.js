@@ -1,5 +1,5 @@
 // Service Worker for Family Hub PWA
-const CACHE_NAME = 'family-hub-v3';
+const CACHE_NAME = 'family-hub-v4';
 const urlsToCache = [
     './',
     './index.html',

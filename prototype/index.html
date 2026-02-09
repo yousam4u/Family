@@ -1433,7 +1433,7 @@
         </div>
 
         <div class="card">
-          <div class="card-title">📋 선택한 날의 일정</div>
+          <div class="card-title">📋 선택한 날의 일정 <span id="selectedDateLabel" style="font-weight:400;color:var(--text-sub);font-size:13px;"></span></div>
           <div id="selectedDateEvents">
             <p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">날짜를 선택하세요</p>
           </div>
@@ -2289,19 +2289,26 @@
 
           if (!eventsErr && events) {
             DEMO_EVENTS = {};
+            TODAY_EVENTS = [];
+            const todayStr = new Date().toISOString().slice(0, 10);
             events.forEach(ev => {
               const date = new Date(ev.start_at);
-              const day = date.getDate();
+              const dateKey = date.toISOString().slice(0, 10); // YYYY-MM-DD format
               const time = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-              if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
-              DEMO_EVENTS[day].push({
+              if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+              const eventObj = {
                 id: ev.id,
                 title: ev.title,
                 time: time,
                 scope: ev.scope || 'family',
                 recurrence: ev.recurrence_rule ? 'weekly' : 'none',
-                createdBy: ev.created_by || null  // 개인 일정 소유자
-              });
+                createdBy: ev.created_by || null
+              };
+              DEMO_EVENTS[dateKey].push(eventObj);
+              // Add to TODAY_EVENTS if it's today
+              if (dateKey === todayStr) {
+                TODAY_EVENTS.push({ ...eventObj, icon: eventObj.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤', done: false });
+              }
             });
             console.log('일정 로드 완료');
           }
@@ -3505,8 +3512,9 @@
 
         for (let d = 1; d <= daysInMonth; d++) {
           const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-          const hasEvent = DEMO_EVENTS[d];
-          html += `<div class="day${isToday ? ' today' : ''}" onclick="selectDate(${d})">
+          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const hasEvent = DEMO_EVENTS[dateKey];
+          html += `<div class="day${isToday ? ' today' : ''}" onclick="selectDate('${dateKey}')">
       ${d}${hasEvent ? '<div class="dot"></div>' : ''}
     </div>`;
         }
@@ -3523,9 +3531,17 @@
         renderCalendar();
       }
 
-      function selectDate(day) {
-        const allEvents = DEMO_EVENTS[day];
+      function selectDate(dateKey) {
+        const allEvents = DEMO_EVENTS[dateKey];
         const el = document.getElementById('selectedDateEvents');
+
+        // Display selected date
+        const [year, month, day] = dateKey.split('-');
+        const dateLabel = document.getElementById('selectedDateLabel');
+        if (dateLabel) {
+          dateLabel.textContent = `${parseInt(month)}월 ${parseInt(day)}일`;
+        }
+
         if (!allEvents || allEvents.length === 0) {
           el.innerHTML = '<p style="font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;">일정이 없습니다</p>';
           return;
@@ -3534,9 +3550,8 @@
         // 개인 일정 필터링: 가족 일정은 모두 표시, 개인 일정은 본인 것만 표시
         const currentNickname = currentUser ? currentUser.nickname : null;
         const events = allEvents.filter(function (e) {
-          if (e.scope === 'family') return true;  // 가족 일정은 모두 표시
+          if (e.scope === 'family') return true;
           if (e.scope === 'personal') {
-            // 개인 일정은 본인 것만 표시 (createdBy가 없는 기존 데이터는 모두 표시)
             return !e.createdBy || e.createdBy === currentNickname;
           }
           return true;
@@ -3840,16 +3855,31 @@
         const ev = { title, date: eventDate, time: time || '종일', scope, recurrence, recurrenceEnd: recurrenceEnd || null };
         allEvents.push(ev);
 
-        // Also add to legacy DEMO_EVENTS for the current month dot display
-        const day = new Date(eventDate).getDate();
-        if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
-        DEMO_EVENTS[day].push({
+        // Add to DEMO_EVENTS using YYYY-MM-DD key
+        const dateKey = eventDate; // Already in YYYY-MM-DD format
+        if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+        const eventObj = {
           title,
           time: time || '종일',
           scope,
           recurrence,
-          createdBy: currentUser ? currentUser.nickname : null  // 개인 일정 소유자
-        });
+          createdBy: currentUser ? currentUser.nickname : null
+        };
+        DEMO_EVENTS[dateKey].push(eventObj);
+
+        // Add to TODAY_EVENTS if it's today
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (dateKey === todayStr) {
+          TODAY_EVENTS.push({
+            id: 'ev-' + Date.now(),
+            title,
+            time: time || '종일',
+            scope: scope === 'family' ? '가족' : '개인',
+            icon: scope === 'family' ? '👨‍👩‍👧‍👦' : '👤',
+            done: false
+          });
+          renderTodayEvents();
+        }
 
         generateRecurringEvents(ev);
         renderCalendar();
@@ -3890,30 +3920,33 @@
         var intervalMap = { daily: 1, weekly: 7, biweekly: 14 };
         var current = new Date(start);
 
+        function getDateKey(d) {
+          return d.toISOString().slice(0, 10);
+        }
+
         if (ev.recurrence === 'monthly') {
-          var dayOfMonth = current.getDate();
           current.setMonth(current.getMonth() + 1);
           while (current <= end) {
-            var d = current.getDate();
-            if (!DEMO_EVENTS[d]) DEMO_EVENTS[d] = [];
-            DEMO_EVENTS[d].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            var dateKey = getDateKey(current);
+            if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+            DEMO_EVENTS[dateKey].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
             current.setMonth(current.getMonth() + 1);
           }
         } else if (ev.recurrence === 'yearly') {
           current.setFullYear(current.getFullYear() + 1);
           while (current <= end) {
-            var d2 = current.getDate();
-            if (!DEMO_EVENTS[d2]) DEMO_EVENTS[d2] = [];
-            DEMO_EVENTS[d2].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            var dateKey2 = getDateKey(current);
+            if (!DEMO_EVENTS[dateKey2]) DEMO_EVENTS[dateKey2] = [];
+            DEMO_EVENTS[dateKey2].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
             current.setFullYear(current.getFullYear() + 1);
           }
         } else {
           var interval = intervalMap[ev.recurrence] || 7;
           current.setDate(current.getDate() + interval);
           while (current <= end) {
-            var d3 = current.getDate();
-            if (!DEMO_EVENTS[d3]) DEMO_EVENTS[d3] = [];
-            DEMO_EVENTS[d3].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
+            var dateKey3 = getDateKey(current);
+            if (!DEMO_EVENTS[dateKey3]) DEMO_EVENTS[dateKey3] = [];
+            DEMO_EVENTS[dateKey3].push({ title: ev.title, time: ev.time, scope: ev.scope, recurrence: ev.recurrence });
             current.setDate(current.getDate() + interval);
           }
         }
@@ -3936,13 +3969,10 @@
       function getAllFlatEvents() {
         // Combine allEvents + DEMO_EVENTS into flat array with date info
         var result = allEvents.slice();
-        var now = new Date();
-        var y = now.getFullYear(), m = now.getMonth();
-        Object.keys(DEMO_EVENTS).forEach(function (day) {
-          DEMO_EVENTS[day].forEach(function (ev) {
-            var dateStr = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            if (!result.some(function (r) { return r.title === ev.title && r.date === dateStr; })) {
-              result.push({ title: ev.title, date: dateStr, time: ev.time || '종일', scope: ev.scope || 'family', recurrence: ev.recurrence || 'none' });
+        Object.keys(DEMO_EVENTS).forEach(function (dateKey) {
+          DEMO_EVENTS[dateKey].forEach(function (ev) {
+            if (!result.some(function (r) { return r.title === ev.title && r.date === dateKey; })) {
+              result.push({ title: ev.title, date: dateKey, time: ev.time || '종일', scope: ev.scope || 'family', recurrence: ev.recurrence || 'none' });
             }
           });
         });
@@ -4070,14 +4100,14 @@
           items.forEach(function (item) {
             var start = item.start.dateTime || item.start.date;
             var d = new Date(start);
-            var day = d.getDate();
+            var dateKey = d.toISOString().slice(0, 10); // YYYY-MM-DD
             var time = item.start.dateTime ? d.toTimeString().slice(0, 5) : '종일';
             var title = (item.summary || '(제목 없음)') + ' (G)';
 
-            if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
-            var exists = DEMO_EVENTS[day].some(function (e) { return e.title === title; });
+            if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+            var exists = DEMO_EVENTS[dateKey].some(function (e) { return e.title === title; });
             if (!exists) {
-              DEMO_EVENTS[day].push({ title: title, time: time, scope: 'personal', recurrence: 'none' });
+              DEMO_EVENTS[dateKey].push({ title: title, time: time, scope: 'personal', recurrence: 'none' });
               imported++;
             }
           });
@@ -4101,11 +4131,13 @@
           { title: '📞 화상회의 (G)', time: '14:00', scope: 'personal', recurrence: 'none' },
           { title: '🎂 친구 생일 (G)', time: '종일', scope: 'personal', recurrence: 'yearly' },
         ];
-        var today = new Date().getDate();
+        var today = new Date();
         demoGoogleEvents.forEach(function (ev, i) {
-          var d = ((today + i + 1) % 28) + 1;
-          if (!DEMO_EVENTS[d]) DEMO_EVENTS[d] = [];
-          DEMO_EVENTS[d].push(ev);
+          var futureDate = new Date(today);
+          futureDate.setDate(today.getDate() + i + 1);
+          var dateKey = futureDate.toISOString().slice(0, 10);
+          if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+          DEMO_EVENTS[dateKey].push(ev);
         });
         renderCalendar();
         resultEl.innerHTML = '✅ ' + demoGoogleEvents.length + '건 데모 일정 가져옴';
@@ -4393,10 +4425,10 @@
         hideModal('meetingModal');
         showToast('회의가 생성되었습니다');
 
-        // Also add to calendar
-        const day = new Date(date).getDate();
-        if (!DEMO_EVENTS[day]) DEMO_EVENTS[day] = [];
-        DEMO_EVENTS[day].push({ title: '📋 ' + title, time, scope: 'family' });
+        // Also add to calendar using date key
+        const dateKey = date; // Already in YYYY-MM-DD format
+        if (!DEMO_EVENTS[dateKey]) DEMO_EVENTS[dateKey] = [];
+        DEMO_EVENTS[dateKey].push({ title: '📋 ' + title, time, scope: 'family' });
         renderCalendar();
       }
 
