@@ -2294,7 +2294,8 @@
             .select('*')
             .eq('family_id', familyId);
 
-          if (!eventsErr && events) {
+          if (!eventsErr && events && events.length > 0) {
+            // Supabase에 일정이 있으면 로드
             DEMO_EVENTS = {};
             TODAY_EVENTS = [];
             const todayStr = new Date().toISOString().slice(0, 10);
@@ -2317,7 +2318,13 @@
                 TODAY_EVENTS.push({ ...eventObj, icon: eventObj.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤', done: false });
               }
             });
-            console.log('일정 로드 완료');
+            // Supabase에서 로드한 일정도 로컬에 백업 저장
+            saveEventsToLocal();
+            console.log('일정 로드 완료 (Supabase):', events.length, '건');
+          } else {
+            // Supabase에 일정이 없으면 로컬에서 로드 시도
+            console.log('Supabase 일정 없음 - 로컬 저장소 확인');
+            loadEventsFromLocal();
           }
 
           // 4. 벌금 로드
