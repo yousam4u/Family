@@ -2248,6 +2248,8 @@
       async function loadFamilyData() {
         if (!sbClient || !currentFamily?.id) {
           console.log('Supabase 미연결 또는 가족 ID 없음 - 로컬 데이터 사용');
+          // 로컬 저장소에서 일정 로드
+          loadEventsFromLocal();
           return;
         }
 
@@ -2292,7 +2294,8 @@
             .select('*')
             .eq('family_id', familyId);
 
-          if (!eventsErr && events) {
+          if (!eventsErr && events && events.length > 0) {
+            // Supabase에 일정이 있으면 로드
             DEMO_EVENTS = {};
             TODAY_EVENTS = [];
             const todayStr = new Date().toISOString().slice(0, 10);
@@ -2315,7 +2318,13 @@
                 TODAY_EVENTS.push({ ...eventObj, icon: eventObj.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤', done: false });
               }
             });
-            console.log('일정 로드 완료');
+            // Supabase에서 로드한 일정도 로컬에 백업 저장
+            saveEventsToLocal();
+            console.log('일정 로드 완료 (Supabase):', events.length, '건');
+          } else {
+            // Supabase에 일정이 없으면 로컬에서 로드 시도
+            console.log('Supabase 일정 없음 - 로컬 저장소 확인');
+            loadEventsFromLocal();
           }
 
           // 4. 벌금 로드
@@ -2445,6 +2454,46 @@
       var DEMO_FINES = [];
 
       var DEMO_EVENTS = {};
+
+      // ========== 로컬 저장소 이벤트 관리 ==========
+      function getLocalStorageKey() {
+        const familyName = currentFamily ? currentFamily.name : 'default';
+        return 'familyHub_events_' + familyName;
+      }
+
+      function saveEventsToLocal() {
+        try {
+          const key = getLocalStorageKey();
+          localStorage.setItem(key, JSON.stringify(DEMO_EVENTS));
+          console.log('일정 로컬 저장 완료');
+        } catch (e) {
+          console.error('일정 로컬 저장 실패:', e);
+        }
+      }
+
+      function loadEventsFromLocal() {
+        try {
+          const key = getLocalStorageKey();
+          const saved = localStorage.getItem(key);
+          if (saved) {
+            DEMO_EVENTS = JSON.parse(saved);
+            // Update TODAY_EVENTS
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (DEMO_EVENTS[todayStr]) {
+              TODAY_EVENTS = DEMO_EVENTS[todayStr].map(ev => ({
+                ...ev,
+                icon: ev.scope === 'family' ? '👨‍👩‍👧‍👦' : '👤',
+                done: false
+              }));
+            }
+            console.log('일정 로컬 로드 완료:', Object.keys(DEMO_EVENTS).length, '일');
+            return true;
+          }
+        } catch (e) {
+          console.error('일정 로컬 로드 실패:', e);
+        }
+        return false;
+      }
 
       let rouletteSpinHistory = [];
       let lastWinner = null;
@@ -3936,6 +3985,9 @@
           });
         }
 
+        // 로컬 저장소에 저장
+        saveEventsToLocal();
+
         renderCalendar();
         selectDate(dateKey);
         hideModal('eventModal');
@@ -4027,6 +4079,9 @@
           });
         }
 
+        // 로컬 저장소에 저장
+        saveEventsToLocal();
+
         renderCalendar();
         selectDate(newDateKey);
         hideModal('eventModal');
@@ -4087,6 +4142,9 @@
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventRecurrence').value = 'none';
         document.getElementById('recurrenceEndGroup').style.display = 'none';
+
+        // 로컬 저장소에 저장 (Supabase 연결 여부와 관계없이)
+        saveEventsToLocal();
 
         showToast(recurrence !== 'none' ? '반복 일정이 추가되었습니다 (' + RECURRENCE_LABELS[recurrence] + ')' : '일정이 추가되었습니다');
 
